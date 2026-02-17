@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "yaml-provenance"
+version = "0.1.0"
+description = "Track where every value in your YAML configuration came from"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.8"
+authors = [
+    { name = "ESM-Tools Development Team" },
+    { email = "miguel.andres-martinez@awi.de", name = "Miguel Andres-Martinez" },
+    { email = "paul.gierz@awi.de", name = "Paul Gierz" },
+    { email = "muhammad.shafeeque@awi.de", name = "Muhammad Shafeeque" },
+]
+maintainers = [
+    { email = "miguel.andres-martinez@awi.de", name = "Miguel Andres-Martinez" },
+    { email = "paul.gierz@awi.de", name = "Paul Gierz" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "ruamel.yaml>=0.17",
+    "loguru",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "pytest-cov",
+]
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/yaml_provenance"]
