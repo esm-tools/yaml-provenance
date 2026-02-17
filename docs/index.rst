@@ -10,6 +10,7 @@ Track where every value in your YAML configuration came from.
    quickstart
    configuration
    api
+   contributing
 
 Indices and tables
 ==================
