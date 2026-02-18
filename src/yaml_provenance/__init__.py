@@ -16,6 +16,7 @@ from ._list import ListWithProvenance
 from ._decorator import keep_provenance_in_recursive_function
 from ._helpers import clean_provenance
 from .yaml_loader import ProvenanceConstructor, ProvenanceLoader, load_yaml
+from ._yaml_dumper import dump_yaml
 
 __all__ = [
     # Config
@@ -38,10 +39,11 @@ __all__ = [
     "keep_provenance_in_recursive_function",
     # Helpers
     "clean_provenance",
-    # YAML loader
+    # YAML I/O
     "ProvenanceConstructor",
     "ProvenanceLoader",
     "load_yaml",
+    "dump_yaml",
 ]
 
 __version__ = "0.1.0"

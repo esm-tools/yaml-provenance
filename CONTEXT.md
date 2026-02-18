@@ -23,7 +23,8 @@ src/yaml_provenance/
 ├── _list.py            # ListWithProvenance(list) — recursive provenance on lists
 ├── _decorator.py       # @keep_provenance_in_recursive_function decorator
 ├── _helpers.py         # clean_provenance() — strips provenance recursively
-└── yaml_loader.py      # ProvenanceConstructor, ProvenanceLoader, load_yaml()
+├── yaml_loader.py      # ProvenanceConstructor, ProvenanceLoader, load_yaml()
+└── _yaml_dumper.py     # dump_yaml(), _format_provenance_comment(), _add_eol_comments()
 ```
 
 ## Key Concepts
@@ -100,6 +101,7 @@ Tests live in `tests/`. Run with `pytest`. Key test files:
 - `test_config.py` — ProvenanceConfig and hierarchy
 - `test_lightweight.py` — Lightweight mode behavior
 - `test_yaml_loader.py` — YAML loading with provenance
+- `test_yaml_dumper.py` — dump_yaml() with provenance comments
 
 Test fixtures are in `tests/fixtures/`.
 
@@ -130,3 +132,34 @@ d = DictWithProvenance(data, prov)
 ### Bypassing provenance tracking
 Use `super_setitem(key, val)` on DictWithProvenance/ListWithProvenance to
 set values without any provenance logic.
+
+### Dumping to YAML with provenance comments
+```python
+from yaml_provenance import load_yaml, dump_yaml
+from io import StringIO
+
+cfg = load_yaml("config.yaml")
+dump_yaml(cfg)                        # to stdout
+dump_yaml(cfg, filepath="out.yaml")   # to file
+buf = StringIO()
+dump_yaml(cfg, stream=buf)            # to in-memory buffer
+print(buf.getvalue())
+```
+
+Output example:
+```yaml
+echam:
+  type: atmosphere  # config.yaml,line:2,col:11
+  files:
+    greenhouse:
+      kind: input  # config.yaml,line:5,col:19
+      a_list:
+      - 1  # config.yaml,line:8,col:19
+      - 2  # config.yaml,line:9,col:19
+```
+
+`_yaml_dumper.py` internals:
+- `_format_provenance_comment(prov)` → `"file,line:N,col:N[,category:cat/sub]"`
+- `_add_eol_comments(commented_map, prov_config)` — recursive walker
+- `dump_yaml` cleans provenance, round-trips through ruamel.yaml to get a
+  `CommentedMap`, then annotates each scalar with its provenance before writing.

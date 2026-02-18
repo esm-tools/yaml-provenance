@@ -45,6 +45,11 @@ YAML Loader
 .. autoclass:: yaml_provenance.ProvenanceConstructor
    :members:
 
+YAML Dumper
+-----------
+
+.. autofunction:: yaml_provenance.dump_yaml
+
 Exceptions
 ----------
 
