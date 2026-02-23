@@ -35,6 +35,7 @@ class DictWithProvenance(dict):
     def __init__(self, dictionary, provenance, config=None):
         super().__init__(dictionary)
         self._config = config or get_config()
+        self._provenance_map = {}  # Shadow map: stores provenance independently of values
         self.custom_setitem = False
         self.put_provenance(provenance)
         self.custom_setitem = True
@@ -56,6 +57,11 @@ class DictWithProvenance(dict):
             provenance = {}
 
         for key, val in self.items():
+            # Store provenance in shadow map for all keys
+            prov_val = provenance.get(key, None)
+            if prov_val is not None:
+                self._provenance_map[key] = prov_val
+            
             if isinstance(val, dict):
                 self[key] = DictWithProvenance(
                     val, provenance.get(key, {}) or {}, config=self._config
@@ -130,7 +136,17 @@ class DictWithProvenance(dict):
             elif hasattr(val, "provenance"):
                 provenance_dict[key] = val.provenance[index]
             else:
-                provenance_dict[key] = None
+                # Fall back to shadow map for plain values
+                if key in self._provenance_map:
+                    prov_entry = self._provenance_map[key]
+                    if isinstance(prov_entry, list):
+                        provenance_dict[key] = prov_entry[index] if prov_entry else None
+                    elif hasattr(prov_entry, 'provenance'):
+                        provenance_dict[key] = prov_entry.provenance[index] if prov_entry.provenance else None
+                    else:
+                        provenance_dict[key] = None
+                else:
+                    provenance_dict[key] = None
 
         return provenance_dict
 
@@ -261,6 +277,19 @@ class DictWithProvenance(dict):
                     val_new = copy.deepcopy(val) if config.track_history else val
                     val_new.provenance = new_provenance
 
+        # Update shadow map before calling super().__setitem__
+        # This preserves provenance even if val_new is later replaced with a plain value
+        if hasattr(val_new, "provenance"):
+            self._provenance_map[key] = val_new.provenance
+        elif isinstance(val_new, DictWithProvenance):
+            # For nested dicts, store a reference to the nested dict itself
+            # so we can extract its provenance later
+            self._provenance_map[key] = val_new
+        elif isinstance(val_new, list):
+            from ._list import ListWithProvenance
+            if isinstance(val_new, ListWithProvenance):
+                self._provenance_map[key] = val_new
+
         super().__setitem__(key, val_new)
 
     def super_setitem(self, key, val):
@@ -268,6 +297,26 @@ class DictWithProvenance(dict):
         Call the original ``dict.__setitem__`` without provenance tracking.
         """
         super().__setitem__(key, val)
+
+    def __copy__(self):
+        """Shallow copy preserving the provenance map."""
+        new_dict = DictWithProvenance({}, {}, config=self._config)
+        new_dict.custom_setitem = False
+        for key, val in self.items():
+            super(DictWithProvenance, new_dict).__setitem__(key, val)
+        new_dict._provenance_map = self._provenance_map.copy()
+        new_dict.custom_setitem = True
+        return new_dict
+
+    def __deepcopy__(self, memo):
+        """Deep copy preserving the provenance map."""
+        new_dict = DictWithProvenance({}, {}, config=self._config)
+        new_dict.custom_setitem = False
+        for key, val in self.items():
+            super(DictWithProvenance, new_dict).__setitem__(key, copy.deepcopy(val, memo))
+        new_dict._provenance_map = copy.deepcopy(self._provenance_map, memo)
+        new_dict.custom_setitem = True
+        return new_dict
 
     def update(self, dictionary, *args, **kwargs):
         """

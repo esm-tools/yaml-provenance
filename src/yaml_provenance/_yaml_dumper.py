@@ -96,11 +96,26 @@ def _add_eol_comments(commented_config, config):
                 if isinstance(pvalue, (dict, list)):
                     _add_eol_comments(cvalue, pvalue)
             else:
-                provenance_list = getattr(pvalue, "provenance", [])
-                if provenance_list:
-                    provenance = provenance_list[-1]
-                else:
-                    provenance = None
+                # Try to get provenance from shadow map first (for DictWithProvenance)
+                from ._dict import DictWithProvenance
+                provenance = None
+                if isinstance(config, DictWithProvenance) and hasattr(config, '_provenance_map'):
+                    prov_entry = config._provenance_map.get(key)
+                    if prov_entry is not None:
+                        # prov_entry could be a Provenance list or a nested structure
+                        if isinstance(prov_entry, list) and prov_entry:
+                            provenance = prov_entry[-1]
+                        elif hasattr(prov_entry, 'provenance'):
+                            # It's a wrapped value
+                            if prov_entry.provenance:
+                                provenance = prov_entry.provenance[-1]
+                
+                # Fall back to extracting from value's .provenance attribute
+                if provenance is None:
+                    provenance_list = getattr(pvalue, "provenance", [])
+                    if provenance_list:
+                        provenance = provenance_list[-1]
+                
                 comment = _format_provenance_comment(provenance)
                 commented_config.yaml_add_eol_comment(comment, key)
 
