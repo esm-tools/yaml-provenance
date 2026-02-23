@@ -108,7 +108,7 @@ class Provenance(list):
         provenance_step : dict
             The provenance step with the ``modified_by`` item added.
         """
-        if provenance_step is not None:
+        if provenance_step is not None and isinstance(provenance_step, dict):
             provenance_step[modified_by] = str(func)
 
         return provenance_step
