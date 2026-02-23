@@ -61,7 +61,16 @@ class DictWithProvenance(dict):
                     val, provenance.get(key, []), config=self._config
                 )
             elif hasattr(val, "provenance"):
-                self[key].provenance.extend(provenance.get(key, {}))
+                # Get provenance value for this key
+                prov_val = provenance.get(key, {})
+                # Only extend if prov_val is not None/empty
+                if prov_val:
+                    if isinstance(prov_val, list):
+                        # If it's a list, extend with it
+                        self[key].provenance.extend(prov_val)
+                    else:
+                        # If it's a single dict/other, append it (don't extend which adds keys as strings)
+                        self[key].provenance.append(prov_val)
             else:
                 self[key] = wrapper_with_provenance_factory(
                     val, provenance.get(key, None)
