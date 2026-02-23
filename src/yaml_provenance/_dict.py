@@ -278,9 +278,21 @@ class DictWithProvenance(dict):
                         else:
                             # Old category is higher — keep old value
                             val_new = copy.deepcopy(old_val) if config.track_history else old_val
+                            # Preserve the original provenance structure (yaml_file, line, col)
+                            # by creating a reversion provenance from the old value's provenance
+                            if old_prov and old_prov[-1]:
+                                # Copy the last provenance entry to preserve yaml_file, line, col
+                                reversion_prov_data = copy.deepcopy(old_prov[-1]) if isinstance(old_prov[-1], dict) else {"category": old_category}
+                                # Ensure category is set correctly
+                                if isinstance(reversion_prov_data, dict):
+                                    reversion_prov_data["category"] = old_category
+                            else:
+                                # Fallback if no provenance exists
+                                reversion_prov_data = {"category": old_category}
+                            
                             new_provenance.extend_and_modified_by(
                                 Provenance(
-                                    {"category": old_category},
+                                    reversion_prov_data,
                                     track_history=config.track_history,
                                 ),
                                 "dict.__setitem__->reverted_by_hierarchy",
