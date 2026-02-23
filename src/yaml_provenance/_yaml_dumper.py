@@ -105,6 +105,9 @@ def _add_eol_comments(commented_config, config):
                         # prov_entry could be a Provenance list or a nested structure
                         if isinstance(prov_entry, list) and prov_entry:
                             provenance = prov_entry[-1]
+                        elif isinstance(prov_entry, dict):
+                            # It's a single provenance dict (from get_provenance extraction)
+                            provenance = prov_entry
                         elif hasattr(prov_entry, 'provenance'):
                             # It's a wrapped value
                             if prov_entry.provenance:
