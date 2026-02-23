@@ -85,6 +85,19 @@ def _add_eol_comments(commented_config, config):
         The provenance-tracked config to read provenance from.
     """
     if isinstance(commented_config, dict):
+        # Log dict processing at start
+        from loguru import logger
+        logger.info(f"[TRACE] _add_eol_comments: Processing dict with {len(commented_config)} keys")
+        logger.info(f"[TRACE]   config type: {type(config).__name__}")
+        logger.info(f"[TRACE]   Is DictWithProvenance: {isinstance(config, DictWithProvenance)}")
+        if hasattr(config, '_provenance_map'):
+            logger.info(f"[TRACE]   Has _provenance_map: True, size: {len(config._provenance_map)}")
+            if config._provenance_map:
+                sample_keys = list(config._provenance_map.keys())[:3]
+                logger.info(f"[TRACE]   Sample _provenance_map keys: {sample_keys}")
+        else:
+            logger.info(f"[TRACE]   Has _provenance_map: False")
+        
         for key, cvalue in commented_config.items():
             if not isinstance(config, dict):
                 continue
@@ -98,28 +111,43 @@ def _add_eol_comments(commented_config, config):
             else:
                 # Try to get provenance from shadow map first (for DictWithProvenance)
                 from ._dict import DictWithProvenance
+                from loguru import logger
+                
+                logger.info(f"[TRACE] Checking provenance for key: '{key}'")
                 provenance = None
                 if isinstance(config, DictWithProvenance) and hasattr(config, '_provenance_map'):
                     prov_entry = config._provenance_map.get(key)
+                    logger.info(f"[TRACE]   Key '{key}' in _provenance_map: {key in config._provenance_map}")
                     if prov_entry is not None:
+                        logger.info(f"[TRACE]   prov_entry type: {type(prov_entry).__name__}")
                         # prov_entry could be a Provenance list or a nested structure
                         if isinstance(prov_entry, list) and prov_entry:
                             provenance = prov_entry[-1]
+                            logger.info(f"[TRACE]   Extracted from list: {provenance}")
                         elif isinstance(prov_entry, dict):
                             # It's a single provenance dict (from get_provenance extraction)
                             provenance = prov_entry
+                            logger.info(f"[TRACE]   Using dict directly: {provenance}")
                         elif hasattr(prov_entry, 'provenance'):
                             # It's a wrapped value
                             if prov_entry.provenance:
                                 provenance = prov_entry.provenance[-1]
+                                logger.info(f"[TRACE]   Extracted from wrapped value: {provenance}")
+                    else:
+                        logger.info(f"[TRACE]   prov_entry is None for key '{key}'")
                 
                 # Fall back to extracting from value's .provenance attribute
                 if provenance is None:
                     provenance_list = getattr(pvalue, "provenance", [])
                     if provenance_list:
                         provenance = provenance_list[-1]
+                        logger.info(f"[TRACE]   Fallback: extracted from pvalue.provenance: {provenance}")
+                    else:
+                        logger.info(f"[TRACE]   Fallback: pvalue has no provenance or empty list")
                 
+                logger.info(f"[TRACE]   Final provenance value: {provenance}")
                 comment = _format_provenance_comment(provenance)
+                logger.info(f"[TRACE]   Comment: {comment}")
                 commented_config.yaml_add_eol_comment(comment, key)
 
     elif isinstance(commented_config, list):
