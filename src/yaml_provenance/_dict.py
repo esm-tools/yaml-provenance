@@ -152,14 +152,18 @@ class DictWithProvenance(dict):
             old_prov = old_val.provenance
 
             # Capture categories BEFORE extending provenance (extend mutates)
-            if old_prov[-1]:
+            if old_prov[-1] and isinstance(old_prov[-1], dict):
                 old_category = old_prov[-1].get("category", None)
-            else:
+            elif not old_prov[-1]:
                 old_category = "backend"
+            else:
+                # old_prov[-1] is truthy but not a dict (e.g., string)
+                old_category = None
 
             new_category = None
             if hasattr(val, "provenance") and val.provenance and val.provenance[-1]:
-                new_category = val.provenance[-1].get("category", None)
+                if isinstance(val.provenance[-1], dict):
+                    new_category = val.provenance[-1].get("category", None)
 
             # new_provenance is the same object as old_prov (a reference)
             new_provenance = old_prov
