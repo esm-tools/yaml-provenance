@@ -84,9 +84,12 @@ def _add_eol_comments(commented_config, config):
     config : DictWithProvenance or ListWithProvenance
         The provenance-tracked config to read provenance from.
     """
+    # Import at function level to avoid scoping issues
+    from ._dict import DictWithProvenance
+    from loguru import logger
+    
     if isinstance(commented_config, dict):
         # Log dict processing at start
-        from loguru import logger
         logger.info(f"[TRACE] _add_eol_comments: Processing dict with {len(commented_config)} keys")
         logger.info(f"[TRACE]   config type: {type(config).__name__}")
         logger.info(f"[TRACE]   Is DictWithProvenance: {isinstance(config, DictWithProvenance)}")
@@ -110,9 +113,6 @@ def _add_eol_comments(commented_config, config):
                     _add_eol_comments(cvalue, pvalue)
             else:
                 # Try to get provenance from shadow map first (for DictWithProvenance)
-                from ._dict import DictWithProvenance
-                from loguru import logger
-                
                 logger.info(f"[TRACE] Checking provenance for key: '{key}'")
                 provenance = None
                 if isinstance(config, DictWithProvenance) and hasattr(config, '_provenance_map'):
