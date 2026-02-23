@@ -51,14 +51,18 @@ class DictWithProvenance(dict):
         """
         from ._list import ListWithProvenance
 
+        # Guard against None provenance
+        if provenance is None:
+            provenance = {}
+
         for key, val in self.items():
             if isinstance(val, dict):
                 self[key] = DictWithProvenance(
-                    val, provenance.get(key, {}), config=self._config
+                    val, provenance.get(key, {}) or {}, config=self._config
                 )
             elif isinstance(val, list):
                 self[key] = ListWithProvenance(
-                    val, provenance.get(key, []), config=self._config
+                    val, provenance.get(key, []) or [], config=self._config
                 )
             elif hasattr(val, "provenance"):
                 # Get provenance value for this key
