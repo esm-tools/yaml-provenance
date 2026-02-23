@@ -50,6 +50,11 @@ def _format_provenance_comment(provenance):
     if not provenance:
         return "no provenance"
 
+    # Check for required keys - handle incomplete provenance gracefully
+    required_keys = ['yaml_file', 'line', 'col']
+    if not all(key in provenance for key in required_keys):
+        return "no provenance"
+
     comment = (
         f"{provenance['yaml_file']},"
         f"line:{provenance['line']},"
@@ -91,7 +96,11 @@ def _add_eol_comments(commented_config, config):
                 if isinstance(pvalue, (dict, list)):
                     _add_eol_comments(cvalue, pvalue)
             else:
-                provenance = getattr(pvalue, "provenance", [None])[-1]
+                provenance_list = getattr(pvalue, "provenance", [])
+                if provenance_list:
+                    provenance = provenance_list[-1]
+                else:
+                    provenance = None
                 comment = _format_provenance_comment(provenance)
                 commented_config.yaml_add_eol_comment(comment, key)
 
@@ -104,7 +113,11 @@ def _add_eol_comments(commented_config, config):
                 if isinstance(pvalue, (dict, list)):
                     _add_eol_comments(cvalue, pvalue)
             else:
-                provenance = getattr(pvalue, "provenance", [None])[-1]
+                provenance_list = getattr(pvalue, "provenance", [])
+                if provenance_list:
+                    provenance = provenance_list[-1]
+                else:
+                    provenance = None
                 comment = _format_provenance_comment(provenance)
                 commented_config.yaml_add_eol_comment(comment, indx)
 
