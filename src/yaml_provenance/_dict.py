@@ -38,10 +38,14 @@ class DictWithProvenance(dict):
         self._provenance_map = {}  # Shadow map: stores provenance independently of values
         self.custom_setitem = False
         self.put_provenance(provenance)
-        logger.info(f"[TRACE] DictWithProvenance.__init__: After put_provenance, _provenance_map has {len(self._provenance_map)} entries")
+        
+        # Debug output using print to ensure visibility
+        import sys
+        print(f"[TRACE-DICT] DictWithProvenance.__init__: After put_provenance, _provenance_map has {len(self._provenance_map)} entries", file=sys.stderr, flush=True)
         if self._provenance_map:
             sample_keys = list(self._provenance_map.keys())[:3]
-            logger.info(f"[TRACE]   Sample keys in _provenance_map: {sample_keys}")
+            print(f"[TRACE-DICT]   Sample keys in _provenance_map: {sample_keys}", file=sys.stderr, flush=True)
+        
         self.custom_setitem = True
 
     def put_provenance(self, provenance):
@@ -60,17 +64,18 @@ class DictWithProvenance(dict):
         if provenance is None:
             provenance = {}
 
-        # Log provenance data being added
+        # Debug output using print to ensure visibility
+        import sys
         keys_with_prov = [k for k, v in provenance.items() if v is not None]
-        logger.info(f"[TRACE] put_provenance: Adding provenance for {len(keys_with_prov)} keys out of {len(self)} dict keys")
+        print(f"[TRACE-DICT] put_provenance: Adding provenance for {len(keys_with_prov)} keys out of {len(self)} dict keys", file=sys.stderr, flush=True)
         if keys_with_prov:
             example_keys = list(keys_with_prov)[:3]  # Show first 3 examples
             for ex_key in example_keys:
                 ex_prov = provenance[ex_key]
                 if isinstance(ex_prov, dict) and 'yaml_file' in ex_prov:
-                    logger.info(f"[TRACE]   Example: key='{ex_key}' -> yaml_file='{ex_prov['yaml_file']}', line={ex_prov.get('line', '?')}")
+                    print(f"[TRACE-DICT]   Example: key='{ex_key}' -> yaml_file='{ex_prov['yaml_file']}', line={ex_prov.get('line', '?')}", file=sys.stderr, flush=True)
                 else:
-                    logger.info(f"[TRACE]   Example: key='{ex_key}' -> type={type(ex_prov).__name__}")
+                    print(f"[TRACE-DICT]   Example: key='{ex_key}' -> type={type(ex_prov).__name__}", file=sys.stderr, flush=True)
 
         for key, val in self.items():
             # Store provenance in shadow map for all keys

@@ -86,20 +86,20 @@ def _add_eol_comments(commented_config, config):
     """
     # Import at function level to avoid scoping issues
     from ._dict import DictWithProvenance
-    from loguru import logger
+    import sys
     
     if isinstance(commented_config, dict):
-        # Log dict processing at start
-        logger.info(f"[TRACE] _add_eol_comments: Processing dict with {len(commented_config)} keys")
-        logger.info(f"[TRACE]   config type: {type(config).__name__}")
-        logger.info(f"[TRACE]   Is DictWithProvenance: {isinstance(config, DictWithProvenance)}")
+        # Debug output using print to ensure visibility
+        print(f"\n[TRACE-DUMPER] _add_eol_comments: Processing dict with {len(commented_config)} keys", file=sys.stderr, flush=True)
+        print(f"[TRACE-DUMPER]   config type: {type(config).__name__}", file=sys.stderr, flush=True)
+        print(f"[TRACE-DUMPER]   Is DictWithProvenance: {isinstance(config, DictWithProvenance)}", file=sys.stderr, flush=True)
         if hasattr(config, '_provenance_map'):
-            logger.info(f"[TRACE]   Has _provenance_map: True, size: {len(config._provenance_map)}")
+            print(f"[TRACE-DUMPER]   Has _provenance_map: True, size: {len(config._provenance_map)}", file=sys.stderr, flush=True)
             if config._provenance_map:
                 sample_keys = list(config._provenance_map.keys())[:3]
-                logger.info(f"[TRACE]   Sample _provenance_map keys: {sample_keys}")
+                print(f"[TRACE-DUMPER]   Sample _provenance_map keys: {sample_keys}", file=sys.stderr, flush=True)
         else:
-            logger.info(f"[TRACE]   Has _provenance_map: False")
+            print(f"[TRACE-DUMPER]   Has _provenance_map: False", file=sys.stderr, flush=True)
         
         for key, cvalue in commented_config.items():
             if not isinstance(config, dict):
@@ -113,41 +113,41 @@ def _add_eol_comments(commented_config, config):
                     _add_eol_comments(cvalue, pvalue)
             else:
                 # Try to get provenance from shadow map first (for DictWithProvenance)
-                logger.info(f"[TRACE] Checking provenance for key: '{key}'")
+                print(f"[TRACE-DUMPER] Checking provenance for key: '{key}'", file=sys.stderr, flush=True)
                 provenance = None
                 if isinstance(config, DictWithProvenance) and hasattr(config, '_provenance_map'):
                     prov_entry = config._provenance_map.get(key)
-                    logger.info(f"[TRACE]   Key '{key}' in _provenance_map: {key in config._provenance_map}")
+                    print(f"[TRACE-DUMPER]   Key '{key}' in _provenance_map: {key in config._provenance_map}", file=sys.stderr, flush=True)
                     if prov_entry is not None:
-                        logger.info(f"[TRACE]   prov_entry type: {type(prov_entry).__name__}")
+                        print(f"[TRACE-DUMPER]   prov_entry type: {type(prov_entry).__name__}", file=sys.stderr, flush=True)
                         # prov_entry could be a Provenance list or a nested structure
                         if isinstance(prov_entry, list) and prov_entry:
                             provenance = prov_entry[-1]
-                            logger.info(f"[TRACE]   Extracted from list: {provenance}")
+                            print(f"[TRACE-DUMPER]   Extracted from list: {provenance}", file=sys.stderr, flush=True)
                         elif isinstance(prov_entry, dict):
                             # It's a single provenance dict (from get_provenance extraction)
                             provenance = prov_entry
-                            logger.info(f"[TRACE]   Using dict directly: {provenance}")
+                            print(f"[TRACE-DUMPER]   Using dict directly: {provenance}", file=sys.stderr, flush=True)
                         elif hasattr(prov_entry, 'provenance'):
                             # It's a wrapped value
                             if prov_entry.provenance:
                                 provenance = prov_entry.provenance[-1]
-                                logger.info(f"[TRACE]   Extracted from wrapped value: {provenance}")
+                                print(f"[TRACE-DUMPER]   Extracted from wrapped value: {provenance}", file=sys.stderr, flush=True)
                     else:
-                        logger.info(f"[TRACE]   prov_entry is None for key '{key}'")
+                        print(f"[TRACE-DUMPER]   prov_entry is None for key '{key}'", file=sys.stderr, flush=True)
                 
                 # Fall back to extracting from value's .provenance attribute
                 if provenance is None:
                     provenance_list = getattr(pvalue, "provenance", [])
                     if provenance_list:
                         provenance = provenance_list[-1]
-                        logger.info(f"[TRACE]   Fallback: extracted from pvalue.provenance: {provenance}")
+                        print(f"[TRACE-DUMPER]   Fallback: extracted from pvalue.provenance: {provenance}", file=sys.stderr, flush=True)
                     else:
-                        logger.info(f"[TRACE]   Fallback: pvalue has no provenance or empty list")
+                        print(f"[TRACE-DUMPER]   Fallback: pvalue has no provenance or empty list", file=sys.stderr, flush=True)
                 
-                logger.info(f"[TRACE]   Final provenance value: {provenance}")
+                print(f"[TRACE-DUMPER]   Final provenance value: {provenance}", file=sys.stderr, flush=True)
                 comment = _format_provenance_comment(provenance)
-                logger.info(f"[TRACE]   Comment: {comment}")
+                print(f"[TRACE-DUMPER]   Comment: {comment}", file=sys.stderr, flush=True)
                 commented_config.yaml_add_eol_comment(comment, key)
 
     elif isinstance(commented_config, list):
