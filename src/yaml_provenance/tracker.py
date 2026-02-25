@@ -398,6 +398,49 @@ class ProvenanceTracker:
         """
         self.provenance_map.clear()
     
+    def merge(self, other: 'ProvenanceTracker') -> None:
+        """
+        Merge another tracker into this one.
+        
+        Copies all provenance entries from the other tracker into this tracker.
+        If a parameter exists in both trackers, the other tracker's value 
+        overwrites (implements "last file wins" strategy for config merging).
+        
+        Args:
+            other: ProvenanceTracker instance to merge from
+        
+        Raises:
+            TypeError: If other is not a ProvenanceTracker instance
+        
+        Example:
+            >>> main_tracker = ProvenanceTracker()
+            >>> main_tracker.track("DEFAULT.EXPID", "/path/file1.yml", line=5)
+            >>> 
+            >>> new_tracker = ProvenanceTracker()
+            >>> new_tracker.track("DEFAULT.HPCARCH", "/path/file2.yml", line=10)
+            >>> new_tracker.track("DEFAULT.EXPID", "/path/file2.yml", line=15)
+            >>> 
+            >>> main_tracker.merge(new_tracker)
+            >>> # Now main_tracker has both parameters
+            >>> # DEFAULT.EXPID from file2.yml (overwritten)
+            >>> # DEFAULT.HPCARCH from file2.yml (new)
+        
+        Note:
+            This method modifies the tracker in-place. To preserve the original,
+            create a copy first.
+        
+        Use Cases:
+            - Merging configurations from multiple YAML files
+            - Implementing "last file wins" semantics
+            - Building up provenance from multiple sources
+        """
+        if not isinstance(other, ProvenanceTracker):
+            raise TypeError(f"Cannot merge {type(other).__name__} into ProvenanceTracker")
+        
+        # Update our provenance_map with entries from other tracker
+        # This implements "last file wins" - if same key exists, other's value wins
+        self.provenance_map.update(other.provenance_map)
+    
     def __contains__(self, param_path: str) -> bool:
         """
         Check if a parameter is tracked.
