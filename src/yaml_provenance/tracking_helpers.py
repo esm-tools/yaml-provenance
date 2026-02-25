@@ -51,7 +51,8 @@ def track_yaml_provenance(
     tracker: ProvenanceTracker,
     data: Any,
     file_path: str,
-    prefix: str = ""
+    prefix: str = "",
+    category: Optional[str] = None
 ) -> None:
     """
     Extract and track provenance from ruamel.yaml .lc metadata.
@@ -68,6 +69,7 @@ def track_yaml_provenance(
         data: Data structure loaded by ruamel.yaml (with .lc metadata)
         file_path: Path to source YAML file
         prefix: Current path prefix for nested keys (e.g., "DEFAULT")
+        category: Category of the configuration source (e.g., 'base', 'model', 'environment', optional)
     
     Example:
         >>> from ruamel.yaml import YAML
@@ -81,11 +83,11 @@ def track_yaml_provenance(
         >>> 
         >>> # Track provenance before any normalization
         >>> tracker = ProvenanceTracker()
-        >>> track_yaml_provenance(tracker, data, "config.yml")
+        >>> track_yaml_provenance(tracker, data, "config.yml", category="base")
         >>> 
         >>> # Query provenance
         >>> prov = tracker.get("DEFAULT.EXPID")
-        >>> print(f"Line {prov.line}, Column {prov.col}")
+        >>> print(f"Line {prov.line}, Column {prov.col}, Category {prov.category}")
     
     Implementation Details:
         - Recursively traverses dicts and lists
@@ -93,6 +95,7 @@ def track_yaml_provenance(
         - Extracts line/col from .lc.item(idx)[0] for list items
         - Builds dot-separated paths for nested structures
         - Skips values without .lc metadata (no error, silent skip)
+        - Passes category to all tracked parameters
     
     Note:
         This function is designed to work with the specific .lc metadata format
@@ -110,14 +113,14 @@ def track_yaml_provenance(
                     line_col = data.lc.key(key)
                     if line_col and len(line_col) >= 2:
                         line, col = line_col[0], line_col[1]
-                        tracker.track(param_path, file_path, line=line, col=col)
+                        tracker.track(param_path, file_path, line=line, col=col, category=category)
                 except (AttributeError, KeyError, TypeError, IndexError):
                     # .lc metadata not available for this key
                     pass
             
             # Recurse into nested structures
             if isinstance(value, (dict, list)):
-                track_yaml_provenance(tracker, value, file_path, param_path)
+                track_yaml_provenance(tracker, value, file_path, param_path, category=category)
     
     elif isinstance(data, list):
         for idx, item in enumerate(data):
@@ -131,21 +134,22 @@ def track_yaml_provenance(
                     line_col = data.lc.item(idx)
                     if line_col and len(line_col) >= 2:
                         line, col = line_col[0], line_col[1]
-                        tracker.track(param_path, file_path, line=line, col=col)
+                        tracker.track(param_path, file_path, line=line, col=col, category=category)
                 except (AttributeError, KeyError, TypeError, IndexError):
                     # .lc metadata not available for this item
                     pass
             
             # Recurse into nested structures
             if isinstance(item, (dict, list)):
-                track_yaml_provenance(tracker, item, file_path, param_path)
+                track_yaml_provenance(tracker, item, file_path, param_path, category)
 
 
 def track_dict_keys_only(
     tracker: ProvenanceTracker,
     data: Any,
     file_path: str,
-    prefix: str = ""
+    prefix: str = "",
+    category: Optional[str] = None
 ) -> None:
     """
     Track provenance for dict keys only (safety net for merged configs).
@@ -165,6 +169,7 @@ def track_dict_keys_only(
         data: Data structure (dict or nested dicts)
         file_path: Path to source file
         prefix: Current path prefix for nested keys
+        category: Category of the configuration source (e.g., 'base', 'model', 'environment', optional)
     
     Example:
         >>> from yaml_provenance.tracker import ProvenanceTracker
@@ -174,17 +179,18 @@ def track_dict_keys_only(
         >>> merged_config = {"DEFAULT": {"EXPID": "a001", "HPCARCH": "local"}}
         >>> 
         >>> tracker = ProvenanceTracker()
-        >>> track_dict_keys_only(tracker, merged_config, "defaults.yml")
+        >>> track_dict_keys_only(tracker, merged_config, "defaults.yml", category="base")
         >>> 
-        >>> # Provenance shows file but no line/col
+        >>> # Provenance shows file and category but no line/col
         >>> prov = tracker.get("DEFAULT.EXPID")
-        >>> print(f"From {prov.file} (line info unavailable)")
+        >>> print(f"From {prov.file}, category: {prov.category} (line info unavailable)")
     
     Implementation Details:
         - Only tracks dict keys (not list items)
         - Records file path but line=None, col=None
         - Overwrites previous entries (last file wins)
         - Recursively processes nested dicts
+        - Passes category to all tracked parameters
     
     Note:
         This is a "safety net" function. Use track_yaml_provenance when
@@ -196,18 +202,19 @@ def track_dict_keys_only(
             param_path = f"{prefix}.{key}" if prefix else key
             
             # Track key with file only (no line/col available)
-            tracker.track(param_path, file_path, line=None, col=None)
+            tracker.track(param_path, file_path, line=None, col=None, category=category)
             
             # Recurse into nested dicts
             if isinstance(value, dict):
-                track_dict_keys_only(tracker, value, file_path, param_path)
+                track_dict_keys_only(tracker, value, file_path, param_path, category)
 
 
 def track_computed_parameter(
     tracker: ProvenanceTracker,
     param_path: str,
     value: Any,
-    source_description: str
+    source_description: str,
+    category: str = "computed"
 ) -> None:
     """
     Record synthetic provenance for computed/derived parameters.
@@ -223,6 +230,7 @@ def track_computed_parameter(
         param_path: Dot-separated parameter path
         value: The computed value (not used, included for API consistency)
         source_description: Human-readable description of computation
+        category: Category of the parameter (defaults to "computed")
     
     Example:
         >>> from yaml_provenance.tracker import ProvenanceTracker
@@ -235,7 +243,8 @@ def track_computed_parameter(
         ...     tracker,
         ...     "JOBS.SIM.OUTPUT_PATH",
         ...     "/scratch/exp001/output",
-        ...     "Computed from SCRATCH_DIR + EXPID + 'output'"
+        ...     "Computed from SCRATCH_DIR + EXPID + 'output'",
+        ...     category="computed"
         ... )
         >>> 
         >>> # Track a substituted value
@@ -243,12 +252,14 @@ def track_computed_parameter(
         ...     tracker,
         ...     "JOBS.SIM.SCRIPT_PATH",
         ...     "/home/user/scripts/run.sh",
-        ...     "After variable substitution: %ROOTDIR%/scripts/run.sh"
+        ...     "After variable substitution: %ROOTDIR%/scripts/run.sh",
+        ...     category="substituted"
         ... )
         >>> 
         >>> # Query the provenance
         >>> prov = tracker.get("JOBS.SIM.OUTPUT_PATH")
         >>> print(prov.file)  # "Computed from SCRATCH_DIR + EXPID + 'output'"
+        >>> print(prov.category)  # "computed"
     
     Use Cases:
         - Variable substitution (%EXPID% -> a001)
@@ -261,6 +272,7 @@ def track_computed_parameter(
         - Stores description in the 'file' field (semantic repurposing)
         - Sets line=None, col=None (not applicable to computed values)
         - Timestamp records when computation occurred
+        - Category defaults to "computed" but can be customized
     
     Note:
         The 'file' field is repurposed to store a description rather than
@@ -268,10 +280,10 @@ def track_computed_parameter(
         source file, so we use the field for human-readable documentation.
     """
     # Use source_description as "file" (semantic repurposing for computed values)
-    tracker.track(param_path, source_description, line=None, col=None)
+    tracker.track(param_path, source_description, line=None, col=None, category=category)
 
 
-def load_yaml_with_tracking(yaml_file: str) -> Tuple[Any, ProvenanceTracker]:
+def load_yaml_with_tracking(yaml_file: str, category: Optional[str] = None) -> Tuple[Any, ProvenanceTracker]:
     """
     Load YAML file and return both data and provenance tracker.
     
@@ -286,6 +298,7 @@ def load_yaml_with_tracking(yaml_file: str) -> Tuple[Any, ProvenanceTracker]:
     
     Args:
         yaml_file: Path to YAML file to load
+        category: Category of the configuration source (e.g., 'base', 'model', 'environment', optional)
     
     Returns:
         tuple: (data, tracker) where:
@@ -296,7 +309,7 @@ def load_yaml_with_tracking(yaml_file: str) -> Tuple[Any, ProvenanceTracker]:
         >>> from yaml_provenance.tracking_helpers import load_yaml_with_tracking
         >>> 
         >>> # Load and track in one call
-        >>> data, tracker = load_yaml_with_tracking("config.yml")
+        >>> data, tracker = load_yaml_with_tracking("config.yml", category="base")
         >>> 
         >>> # Access data normally
         >>> expid = data["DEFAULT"]["EXPID"]
@@ -304,7 +317,7 @@ def load_yaml_with_tracking(yaml_file: str) -> Tuple[Any, ProvenanceTracker]:
         >>> 
         >>> # Query provenance separately
         >>> prov = tracker.get("DEFAULT.EXPID")
-        >>> print(f"From {prov.file} at line {prov.line}")
+        >>> print(f"From {prov.file} at line {prov.line}, category: {prov.category}")
         >>> 
         >>> # Export provenance to YAML
         >>> import yaml
@@ -344,7 +357,7 @@ def load_yaml_with_tracking(yaml_file: str) -> Tuple[Any, ProvenanceTracker]:
     
     # Create tracker and extract provenance
     tracker = ProvenanceTracker()
-    track_yaml_provenance(tracker, data, yaml_file)
+    track_yaml_provenance(tracker, data, yaml_file, category=category)
     
     return data, tracker
 

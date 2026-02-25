@@ -61,17 +61,19 @@ class ProvEntry:
         line (Optional[int]): Line number in file (1-indexed), None if unavailable
         col (Optional[int]): Column number in file (1-indexed), None if unavailable
         timestamp (float): Unix timestamp when parameter was loaded
+        category (Optional[str]): Category of the configuration source (e.g., 'base', 'model', 'environment')
     
     Example:
-        >>> entry = ProvEntry("/path/to/config.yml", line=10, col=5)
+        >>> entry = ProvEntry("/path/to/config.yml", line=10, col=5, category="base")
         >>> print(entry)
         ProvEntry(/path/to/config.yml:10:5)
         >>> entry.to_dict()
-        {'file': '/path/to/config.yml', 'line': 10, 'col': 5, 'timestamp': 1234567890.123}
+        {'file': '/path/to/config.yml', 'line': 10, 'col': 5, 'timestamp': 1234567890.123, 'category': 'base'}
     """
     
     def __init__(self, file: str, line: Optional[int] = None,
-                 col: Optional[int] = None, timestamp: Optional[float] = None):
+                 col: Optional[int] = None, timestamp: Optional[float] = None,
+                 category: Optional[str] = None):
         """
         Initialize a provenance entry.
         
@@ -80,27 +82,29 @@ class ProvEntry:
             line: Line number in file (1-indexed, optional)
             col: Column number in file (1-indexed, optional)
             timestamp: Unix timestamp (defaults to current time)
+            category: Category of the configuration source (e.g., 'base', 'model', 'environment', optional)
         
         Example:
-            >>> entry = ProvEntry("/path/to/config.yml", line=5)
-            >>> entry = ProvEntry("/path/to/config.yml", line=10, col=3, timestamp=1234567890.0)
+            >>> entry = ProvEntry("/path/to/config.yml", line=5, category="base")
+            >>> entry = ProvEntry("/path/to/config.yml", line=10, col=3, timestamp=1234567890.0, category="model")
         """
         self.file = str(file)  # Ensure string (handles Path objects)
         self.line = line
         self.col = col
         self.timestamp = timestamp if timestamp is not None else time.time()
+        self.category = category
     
     def to_dict(self) -> dict:
         """
         Convert to dictionary format for serialization.
         
         Returns:
-            dict: Dictionary with keys: file, timestamp, line (optional), col (optional)
+            dict: Dictionary with keys: file, timestamp, line (optional), col (optional), category (optional)
         
         Example:
-            >>> entry = ProvEntry("/path/file.yml", line=10)
+            >>> entry = ProvEntry("/path/file.yml", line=10, category="base")
             >>> entry.to_dict()
-            {'file': '/path/file.yml', 'line': 10, 'timestamp': 1734567890.123}
+            {'file': '/path/file.yml', 'line': 10, 'timestamp': 1734567890.123, 'category': 'base'}
         """
         result = {
             "file": self.file,
@@ -110,6 +114,8 @@ class ProvEntry:
             result["line"] = self.line
         if self.col is not None:
             result["col"] = self.col
+        if self.category is not None:
+            result["category"] = self.category
         return result
     
     @classmethod
@@ -118,7 +124,7 @@ class ProvEntry:
         Create ProvEntry from dictionary.
         
         Args:
-            data: Dictionary with keys: file, timestamp, line (optional), col (optional)
+            data: Dictionary with keys: file, timestamp, line (optional), col (optional), category (optional)
         
         Returns:
             ProvEntry: New instance created from dictionary
@@ -127,16 +133,19 @@ class ProvEntry:
             KeyError: If required key "file" is missing from data
         
         Example:
-            >>> data = {'file': '/path/file.yml', 'line': 10, 'timestamp': 1734567890.0}
+            >>> data = {'file': '/path/file.yml', 'line': 10, 'timestamp': 1734567890.0, 'category': 'base'}
             >>> entry = ProvEntry.from_dict(data)
             >>> entry.file
             '/path/file.yml'
+            >>> entry.category
+            'base'
         """
         return cls(
             file=data["file"],
             line=data.get("line"),
             col=data.get("col"),
-            timestamp=data.get("timestamp")
+            timestamp=data.get("timestamp"),
+            category=data.get("category")
         )
     
     def __repr__(self):
@@ -210,7 +219,8 @@ class ProvenanceTracker:
         self.provenance_map: Dict[str, ProvEntry] = {}
     
     def track(self, param_path: str, file: str,
-              line: Optional[int] = None, col: Optional[int] = None) -> None:
+              line: Optional[int] = None, col: Optional[int] = None,
+              category: Optional[str] = None) -> None:
         """
         Record parameter source.
         
@@ -222,24 +232,27 @@ class ProvenanceTracker:
             file: Absolute path to source YAML file
             line: Line number in file (1-indexed, optional)
             col: Column number in file (1-indexed, optional)
+            category: Category of the configuration source (e.g., 'base', 'model', 'environment', optional)
         
         Example:
             >>> tracker = ProvenanceTracker()
-            >>> tracker.track("DEFAULT.EXPID", "/path/config.yml", line=5)
-            >>> tracker.track("JOBS.SIM.WALLCLOCK", "/path/jobs.yml", line=23, col=7)
+            >>> tracker.track("DEFAULT.EXPID", "/path/config.yml", line=5, category="base")
+            >>> tracker.track("JOBS.SIM.WALLCLOCK", "/path/jobs.yml", line=23, col=7, category="jobs")
             >>> 
             >>> # Overwrite existing entry
-            >>> tracker.track("DEFAULT.EXPID", "/path/other.yml", line=10)
+            >>> tracker.track("DEFAULT.EXPID", "/path/other.yml", line=10, category="base")
         
         Note:
             - Overwrites existing entry if parameter already tracked
             - Timestamp automatically set to current time
             - No validation of param_path format (caller's responsibility)
+            - Category helps identify the configuration source type
         """
         self.provenance_map[param_path] = ProvEntry(
             file=file,
             line=line,
-            col=col
+            col=col,
+            category=category
         )
     
     def get(self, param_path: str) -> Optional[ProvEntry]:
