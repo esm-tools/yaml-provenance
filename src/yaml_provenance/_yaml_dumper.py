@@ -50,11 +50,16 @@ def _format_provenance_comment(provenance):
     if not provenance:
         return "no provenance"
 
-    comment = (
-        f"{provenance['yaml_file']},"
-        f"line:{provenance['line']},"
-        f"col:{provenance['col']}"
-    )
+    line = provenance['line']
+    col = provenance['col']
+    if line == 0 and col == 0:
+        comment = f"{provenance['yaml_file']}"
+    else:
+        comment = (
+            f"{provenance['yaml_file']},"
+            f"line:{line},"
+            f"col:{col}"
+        )
 
     category = provenance.get("category")
     if category is not None:

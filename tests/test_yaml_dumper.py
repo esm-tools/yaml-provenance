@@ -51,6 +51,12 @@ def test_format_provenance_comment_category_without_subcategory():
     assert "None" not in comment
 
 
+def test_format_provenance_comment_computed_omits_line_col():
+    """Computed values (line=0, col=0) omit the meaningless line/col suffix."""
+    prov = {"yaml_file": "computed:BasicConfig.LOCAL_ROOT_DIR/t0ht", "line": 0, "col": 0}
+    assert _format_provenance_comment(prov) == "computed:BasicConfig.LOCAL_ROOT_DIR/t0ht"
+
+
 def test_format_provenance_comment_none_returns_no_provenance():
     assert _format_provenance_comment(None) == "no provenance"
 
