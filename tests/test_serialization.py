@@ -2,6 +2,7 @@
 Tests for _serialization.py – pickle reducers, YAML representers, JSON encoder.
 """
 
+import copy
 import json
 import pickle
 from io import StringIO
@@ -184,3 +185,90 @@ class TestProvenanceJSONEncoder:
         """Objects that can't be serialized should still raise."""
         with pytest.raises(TypeError):
             json.dumps({"bad": object()}, cls=ProvenanceJSONEncoder)
+
+
+# ── Deepcopy after pickle reducers ────────────────────────────────────────
+
+
+class TestDeepcopyAfterPickleReducers:
+    """``copy.deepcopy`` must preserve WithProvenance types even after
+    ``register_pickle_reducers`` patches ``__reduce__``."""
+
+    @pytest.fixture(autouse=True)
+    def _register(self):
+        register_pickle_reducers()
+
+    def test_str_deepcopy(self):
+        s = wrapper_with_provenance_factory(
+            "hello",
+            {"yaml_file": "f.yaml", "line": 1, "col": 2,
+             "category": None, "subcategory": None},
+        )
+        s2 = copy.deepcopy(s)
+        assert type(s2).__name__ == "StrWithProvenance"
+        assert str(s2) == "hello"
+        assert hasattr(s2, "_provenance")
+
+    def test_int_deepcopy(self):
+        i = wrapper_with_provenance_factory(
+            42,
+            {"yaml_file": "f.yaml", "line": 3, "col": 1,
+             "category": None, "subcategory": None},
+        )
+        i2 = copy.deepcopy(i)
+        assert type(i2).__name__ == "IntWithProvenance"
+        assert int(i2) == 42
+        assert hasattr(i2, "_provenance")
+
+    def test_bool_deepcopy(self):
+        b = BoolWithProvenance(
+            True,
+            {"yaml_file": "f.yaml", "line": 5, "col": 1,
+             "category": None, "subcategory": None},
+        )
+        b2 = copy.deepcopy(b)
+        assert isinstance(b2, BoolWithProvenance)
+        assert b2.value is True
+        assert hasattr(b2, "_provenance")
+
+    def test_none_deepcopy(self):
+        n = NoneWithProvenance(
+            None,
+            {"yaml_file": "f.yaml", "line": 7, "col": 1,
+             "category": None, "subcategory": None},
+        )
+        n2 = copy.deepcopy(n)
+        assert isinstance(n2, NoneWithProvenance)
+        assert n2.value is None
+        assert hasattr(n2, "_provenance")
+
+    def test_dict_deepcopy(self, loaded_config):
+        d2 = copy.deepcopy(loaded_config)
+        assert type(d2).__name__ == "DictWithProvenance"
+        for k in d2:
+            assert hasattr(k, "_provenance"), f"key {k!r} lost provenance"
+
+    def test_list_deepcopy(self):
+        lst = ListWithProvenance(
+            ["a", "b"],
+            [
+                {"yaml_file": "f.yaml", "line": 1, "col": 3,
+                 "category": None, "subcategory": None},
+                {"yaml_file": "f.yaml", "line": 2, "col": 3,
+                 "category": None, "subcategory": None},
+            ],
+        )
+        lst2 = copy.deepcopy(lst)
+        assert type(lst2).__name__ == "ListWithProvenance"
+        assert list(lst2) == ["a", "b"]
+        for item in lst2:
+            assert hasattr(item, "_provenance"), f"item {item!r} lost provenance"
+
+    def test_deepcopy_dict_from_yaml(self):
+        """End-to-end: load YAML, deepcopy, verify key provenance."""
+        import os
+        cfg = load_yaml(os.path.join(FIXTURES_DIR, "example.yaml"))
+        cfg2 = copy.deepcopy(cfg)
+        assert type(cfg2).__name__ == "DictWithProvenance"
+        for k in cfg2:
+            assert hasattr(k, "_provenance"), f"key {k!r} lost provenance after deepcopy"

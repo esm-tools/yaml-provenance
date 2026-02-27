@@ -2,6 +2,8 @@
 WithProvenance wrapper factory — creates provenance-aware subclasses dynamically.
 """
 
+import copy as _copy
+
 from ._provenance import Provenance
 from ._config import get_config
 
@@ -65,6 +67,27 @@ def prop_provenance(self, new_provenance):
     self._provenance = new_provenance
 
 
+def wrapper_with_provenance_deepcopy(self, memo):
+    """``__deepcopy__`` for WithProvenance subclasses.
+
+    ``copy.deepcopy`` checks for ``__deepcopy__`` *before* falling back to
+    ``__reduce__``.  The pickle reducers registered by
+    ``register_pickle_reducers`` intentionally reduce to the plain builtin
+    type (e.g. ``str``) so that pickle output is compact.  Without a
+    ``__deepcopy__`` override, ``copy.deepcopy`` would use the same
+    ``__reduce__`` path and silently discard provenance.
+    """
+    obj_id = id(self)
+    if obj_id in memo:
+        return memo[obj_id]
+    new = wrapper_with_provenance_factory(
+        type(self).__mro__[1](self),  # plain builtin value (str, int, …)
+        _copy.deepcopy(self._provenance, memo),
+    )
+    memo[obj_id] = new
+    return new
+
+
 # =======================================================
 # CLASSES FOR THE UNSUBCLASSABLE CLASSES (BOOL AND NONE)
 # =======================================================
@@ -89,9 +112,20 @@ class ProvenanceClassForTheUnsubclassable:
         return hash(self.value)
 
 
+def _unsubclassable_deepcopy(self, memo):
+    """``__deepcopy__`` for Bool/NoneWithProvenance."""
+    obj_id = id(self)
+    if obj_id in memo:
+        return memo[obj_id]
+    new = type(self)(self.value, _copy.deepcopy(self._provenance, memo))
+    memo[obj_id] = new
+    return new
+
+
 # Add the class attributes common to all WithProvenance classes
 ProvenanceClassForTheUnsubclassable.__init__ = wrapper_with_provenance_init
 ProvenanceClassForTheUnsubclassable.provenance = prop_provenance
+ProvenanceClassForTheUnsubclassable.__deepcopy__ = _unsubclassable_deepcopy
 
 
 class BoolWithProvenance(ProvenanceClassForTheUnsubclassable):
@@ -177,6 +211,7 @@ def wrapper_with_provenance_factory(value, provenance=None):
                     "__new__": wrapper_with_provenance_new,
                     "__init__": wrapper_with_provenance_init,
                     "provenance": prop_provenance,
+                    "__deepcopy__": wrapper_with_provenance_deepcopy,
                 },
             )
 
