@@ -158,6 +158,19 @@ def test_dump_yaml_no_provenance_comment():
     assert "no provenance" in buf.getvalue()
 
 
+def test_dump_yaml_empty_dict_value_gets_key_provenance(example_path2):
+    """An empty dict value gets a provenance comment from its key's provenance."""
+    from yaml_provenance._wrapper import wrapper_with_provenance_factory
+
+    prov = {"yaml_file": "jobs.yml", "line": 5, "col": 7, "category": None, "subcategory": None}
+    key = wrapper_with_provenance_factory("DEPS", prov)
+    config = DictWithProvenance({key: {}}, {})
+    buf = StringIO()
+    dump_yaml(config, stream=buf)
+    output = buf.getvalue()
+    assert "jobs.yml,line:5,col:7" in output
+
+
 def test_dump_yaml_category_in_comment(example_path2):
     """Category and subcategory appear in comments when a resolver is used."""
     config = load_yaml(example_path2, category_resolver=lambda fp: ("components", "echam"))
@@ -216,3 +229,27 @@ def test_dump_yaml_complex_example(example_path1):
     assert reloaded["person"]["name"] == "Some Name With Surname"
     assert reloaded["person"]["my_int2"] == 42
     assert reloaded["person"]["my_bolean"] is True
+
+
+# ---------------------------------------------------------------------------
+# dump_yaml — empty dict values (e.g. DEPENDENCIES entries)
+# ---------------------------------------------------------------------------
+
+
+def test_dump_yaml_empty_dict_from_yaml_gets_key_provenance():
+    """Empty dict values loaded from YAML carry provenance from the key."""
+    deps_path = os.path.join(os.path.dirname(__file__), "fixtures", "dependencies.yaml")
+    config = load_yaml(deps_path)
+    buf = StringIO()
+    dump_yaml(config, stream=buf)
+    output = buf.getvalue()
+    # SETUP: {} and INI: {} should get provenance from their key positions
+    assert "dependencies.yaml" in output
+    # Non-empty nested dict SIM-1 should have scalar provenance for STATUS
+    assert "COMPLETED" in output
+    # Empty dicts should NOT say "no provenance"
+    lines = output.strip().split("\n")
+    for line in lines:
+        # Lines with "{}" value (empty dict) should have real provenance
+        if ": {}" in line:
+            assert "no provenance" not in line, f"Empty dict line has no provenance: {line}"

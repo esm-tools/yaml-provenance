@@ -13,6 +13,7 @@ from ruamel.yaml.constructor import RoundTripConstructor
 
 from ._config import get_config
 from ._dict import DictWithProvenance
+from ._wrapper import wrapper_with_provenance_factory as _wrap
 
 
 class ProvenanceConstructor(RoundTripConstructor):
@@ -111,9 +112,21 @@ class ProvenanceLoader:
         prov = {}
 
         for raw_key, raw_val in raw_dict.items():
-            # Unwrap key
+            # Unwrap key — wrap string keys with provenance so that
+            # even entries whose *values* are empty dicts or lists
+            # still carry a provenance trace (on the key itself).
             if _is_prov_tuple(raw_key):
-                key = raw_key[0]
+                raw_key_val = raw_key[0]
+                key_line, key_col = raw_key[1]
+                if isinstance(raw_key_val, str):
+                    key = _wrap(raw_key_val, {
+                        "line": key_line, "col": key_col,
+                        "yaml_file": filepath,
+                        "category": category,
+                        "subcategory": subcategory,
+                    })
+                else:
+                    key = raw_key_val
             else:
                 key = raw_key
 
