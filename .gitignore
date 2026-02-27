@@ -12,3 +12,13 @@ docs/_build/
 *.swo
 *~
 .DS_Store
+
+venv/
+.venv/
+
+.github/agents/
+.github/plans/
+.github/skills/
+
+prov-implementation/
+experiment/

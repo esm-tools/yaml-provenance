@@ -73,14 +73,18 @@ class ProvenanceLoader:
 
         Parameters
         ----------
-        filepath : str or Path
-            Path to the YAML file.
+        filepath : str, Path, or file-like
+            Path to the YAML file, or an open file object with a ``.name``
+            attribute.
 
         Returns
         -------
         DictWithProvenance
             The loaded data with provenance tracking.
         """
+        # Accept file-like objects by extracting their path
+        if hasattr(filepath, 'name'):
+            filepath = filepath.name
         filepath = str(filepath)
         category, subcategory = self._category_resolver(filepath)
 
@@ -181,8 +185,9 @@ def load_yaml(filepath, category_resolver=None, config=None):
 
     Parameters
     ----------
-    filepath : str or Path
-        Path to the YAML file.
+    filepath : str, Path, or file-like
+        Path to the YAML file, or an open file object with a ``.name``
+        attribute.
     category_resolver : callable or None
         Maps file paths to ``(category, subcategory)`` tuples.
     config : ProvenanceConfig or None
