@@ -63,4 +63,20 @@ Helpers
 
 .. autofunction:: yaml_provenance.clean_provenance
 
+.. autofunction:: yaml_provenance.wrap_computed
+
+.. autofunction:: yaml_provenance.transfer_provenance
+
+.. autofunction:: yaml_provenance.annotate_dict
+
 .. autofunction:: yaml_provenance.keep_provenance_in_recursive_function
+
+Serialization
+-------------
+
+.. autofunction:: yaml_provenance.register_pickle_reducers
+
+.. autofunction:: yaml_provenance.register_yaml_representers
+
+.. autoclass:: yaml_provenance.ProvenanceJSONEncoder
+   :members:
