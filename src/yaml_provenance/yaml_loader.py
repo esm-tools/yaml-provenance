@@ -83,8 +83,10 @@ class ProvenanceLoader:
         DictWithProvenance
             The loaded data with provenance tracking.
         """
-        # Accept file-like objects by extracting their path
-        if hasattr(filepath, 'name'):
+        # Accept file-like objects by extracting their path.
+        # pathlib.Path also has a ``.name`` attribute (the final component),
+        # so we must exclude it to preserve the full path.
+        if hasattr(filepath, 'name') and not isinstance(filepath, Path):
             filepath = filepath.name
         filepath = str(filepath)
         category, subcategory = self._category_resolver(filepath)
