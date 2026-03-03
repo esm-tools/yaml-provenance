@@ -15,10 +15,3 @@ docs/_build/
 
 venv/
 .venv/
-
-.github/agents/
-.github/plans/
-.github/skills/
-
-prov-implementation/
-experiment/
