@@ -64,6 +64,9 @@ class DictWithProvenance(dict):
 
     __deepcopy__ = _dict_deepcopy
 
+    def __reduce__(self):
+        return (dict, (dict(self),))
+
     def put_provenance(self, provenance):
         """
         Recursively transforms every value into its WithProvenance object with

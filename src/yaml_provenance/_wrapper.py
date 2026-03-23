@@ -11,6 +11,24 @@ from ._config import get_config
 # Registry of dynamically created WithProvenance classes
 _wrapper_registry = {}
 
+# Builtin types whose subclasses can be reduced to the builtin for pickling
+_BUILTIN_TYPES = (str, int, float, bytes, bytearray)
+
+
+def _get_builtin_base(cls):
+    """Return the first plain builtin ancestor of *cls* in its MRO."""
+    for base in cls.__mro__:
+        if base in _BUILTIN_TYPES:
+            return base
+    return cls.__bases__[0]
+
+
+def _make_pickle_reduce(builtin_type):
+    """Create a ``__reduce__`` that reduces to the plain *builtin_type*."""
+    def __reduce__(self):
+        return (builtin_type, (builtin_type(self),))
+    return __reduce__
+
 
 # ========================================================
 # PROVENANCE WRAPPER FACTORY CLASS METHODS AND PROPERTIES
@@ -135,6 +153,9 @@ class BoolWithProvenance(ProvenanceClassForTheUnsubclassable):
     ``isinstance(obj, bool)`` returns ``True``.
     """
 
+    def __reduce__(self):
+        return (bool, (self.value,))
+
     @property
     def __class__(self):
         return bool
@@ -146,6 +167,9 @@ class NoneWithProvenance(ProvenanceClassForTheUnsubclassable):
 
     ``isinstance(obj, type(None))`` returns ``True``.
     """
+
+    def __reduce__(self):
+        return (type(None), ())
 
     @property
     def __class__(self):
@@ -212,6 +236,7 @@ def wrapper_with_provenance_factory(value, provenance=None):
                     "__init__": wrapper_with_provenance_init,
                     "provenance": prop_provenance,
                     "__deepcopy__": wrapper_with_provenance_deepcopy,
+                    "__reduce__": _make_pickle_reduce(_get_builtin_base(subtype)),
                 },
             )
 

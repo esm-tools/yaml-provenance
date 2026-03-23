@@ -55,6 +55,9 @@ class ListWithProvenance(list):
 
     __deepcopy__ = _list_deepcopy
 
+    def __reduce__(self):
+        return (list, (list(self),))
+
     def put_provenance(self, provenance):
         """
         Recursively transforms every element into its WithProvenance object with
