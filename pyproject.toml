@@ -11,13 +11,13 @@ license = "MIT"
 requires-python = ">=3.8"
 authors = [
     { name = "ESM-Tools Development Team" },
-    { email = "miguel.andres-martinez@awi.de", name = "Miguel Andres-Martinez" },
     { email = "paul.gierz@awi.de", name = "Paul Gierz" },
+    { email = "miguel.andres-martinez@awi.de", name = "Miguel Andres-Martinez" },
     { email = "muhammad.shafeeque@awi.de", name = "Muhammad Shafeeque" },
 ]
 maintainers = [
-    { email = "miguel.andres-martinez@awi.de", name = "Miguel Andres-Martinez" },
     { email = "paul.gierz@awi.de", name = "Paul Gierz" },
+    { email = "miguel.andres-martinez@awi.de", name = "Miguel Andres-Martinez" },
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",

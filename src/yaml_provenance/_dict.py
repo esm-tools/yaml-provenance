@@ -12,6 +12,7 @@ from ._provenance import Provenance
 from ._wrapper import wrapper_with_provenance_factory
 
 
+
 class DictWithProvenance(dict):
     """
     A dictionary subclass that tracks provenance for all nested values.
@@ -41,15 +42,20 @@ class DictWithProvenance(dict):
 
     def put_provenance(self, provenance):
         """
-        Recursively transforms every value into its WithProvenance object with
-        corresponding provenance from the ``provenance`` dict (1-to-1 mapping).
+        Recursively transforms every value in ``DictWithProvenance`` into its
+        corresponding WithProvenance object and appends its corresponding
+        ``provenance``. Each value has its corresponding provenance defined in the
+        ``provenance`` dictionary, and this method just groups them together 1-to-1.
 
         Parameters
         ----------
         provenance : dict
-            Provenance dict with same keys as ``self``.
+            The provenance that will be recursively assigned to all leaves of the
+            dictionary tree. The provenance needs to be a ``dict`` with the same keys
+            as ``self`` (same structure) so that it can successfully transfer each
+            provenance value to its corresponding value on ``self`` (1-to-1
+            conrrespondance).
         """
-        from ._list import ListWithProvenance
 
         for key, val in self.items():
             if isinstance(val, dict):
@@ -67,29 +73,57 @@ class DictWithProvenance(dict):
                     val, provenance.get(key, None)
                 )
 
-    def set_provenance(self, provenance):
+    def set_provenance(self, provenance, update_method="extend"):
         """
-        Recursively sets the same ``provenance`` on all nested values.
+        Recursively transforms every value in ``DictWithProvenance`` into its
+        corresponding WithProvenance object and appends the same ``provenance`` to it.
+        Note that this method differs from ``put_provenance`` in that the same
+        ``provenance`` value is applied to the different values of ``self``.
 
         Parameters
         ----------
         provenance : any
-            New provenance value to set.
+            New `provenance value` to be set
+        update_method : str, optional
+            Method to use when updating provenance of existing values. Can be either
+            ``extend`` to append the new provenance to the existing one, or ``update``
+            to update the last provenance entry with new values. Default is ``extend``.
         """
-        from ._list import ListWithProvenance
-
         if not isinstance(provenance, list):
             provenance = [provenance]
 
         for key, val in self.items():
             if isinstance(val, dict):
                 self[key] = DictWithProvenance(val, {}, config=self._config)
-                self[key].set_provenance(provenance)
+                self[key].set_provenance(provenance, update_method=update_method)
             elif isinstance(val, list):
                 self[key] = ListWithProvenance(val, [], config=self._config)
-                self[key].set_provenance(provenance)
+                self[key].set_provenance(provenance, update_method=update_method)
             elif hasattr(val, "provenance"):
-                self[key].provenance.extend(provenance)
+                if update_method == "extend":
+                    self[key].provenance.extend(provenance)
+                elif update_method == "update":
+                    if self[key].provenance[-1]:
+                        self[key].provenance[-1].update(provenance[-1])
+                    else:
+                        self[key].provenance[-1] = provenance[-1]
+                elif update_method == "update_from_switch":
+                    if self[key].provenance[-1]:
+                        old_from_switch = (
+                            self[key].provenance[-1].get("from_switch", [])
+                        )
+                        # Extend the from_switch list with the new entry
+                        if old_from_switch:
+                            provenance[-1]["from_switch"] = (
+                                old_from_switch + provenance[-1].get("from_switch", [])
+                            )
+                        self[key].provenance[-1].update(provenance[-1])
+                    else:
+                        self[key].provenance[-1] = provenance[-1]
+                else:
+                    raise ValueError(
+                        f"Unknown update method {update_method}. Use either 'extend' or 'update'"
+                    )
             else:
                 self[key] = wrapper_with_provenance_factory(val, provenance)
 
@@ -104,19 +138,22 @@ class DictWithProvenance(dict):
 
         Returns
         -------
-        dict
-            Provenance dictionary.
+        provenance_dict : dict
+            A dictionary with a structure and `keys` equivalent to the ``self``
+            dictionary, but with `values` of the `key` leaves those of the provenance
         """
-        from ._list import ListWithProvenance
-        PROVENANCE_MAPPINGS = (DictWithProvenance, ListWithProvenance)
 
         provenance_dict = {}
+
         for key, val in self.items():
             if isinstance(val, PROVENANCE_MAPPINGS):
                 provenance_dict[key] = val.get_provenance(index=index)
             elif hasattr(val, "provenance"):
                 provenance_dict[key] = val.provenance[index]
             else:
+                # The DictWithProvenance object might have dictionaries inside that
+                # are not instances of that class (i.e. a dictionary added in the
+                # backend). The provenance in this method is then defined as None
                 provenance_dict[key] = None
 
         return provenance_dict
@@ -124,6 +161,23 @@ class DictWithProvenance(dict):
     def _has_real_hierarchy(self):
         """Check if the config has a non-trivial category hierarchy."""
         return len(self._config.category_hierarchy) > 1
+
+    def extract_first_nested_values_provenance(self):
+        """
+        Recursively loops through the dictionary keys and returns the first provenance
+        found in the nested values.
+
+        Returns
+        -------
+        first_provenance : esm_parser.provenance.Provenance
+            The first provenance found in the nested values
+        """
+        first_provenance = None
+        for key, val in self.items():
+            if isinstance(val, PROVENANCE_MAPPINGS):
+                return val.extract_first_nested_values_provenance()
+            elif hasattr(val, "provenance"):
+                return val.provenance[-1]
 
     def __setitem__(self, key, val):
         """
@@ -157,13 +211,14 @@ class DictWithProvenance(dict):
             else:
                 old_category = "backend"
 
-            new_category = None
+            new_category = "backend"
             if hasattr(val, "provenance") and val.provenance and val.provenance[-1]:
                 new_category = val.provenance[-1].get("category", None)
 
             # new_provenance is the same object as old_prov (a reference)
             new_provenance = old_prov
 
+            # If the new value has provenance extend its provenance with the old one
             if hasattr(val, "provenance"):
                 new_provenance.extend_and_modified_by(
                     val.provenance, "dict.__setitem__"
@@ -176,6 +231,7 @@ class DictWithProvenance(dict):
                         old_idx = hierarchy.index(old_category)
                         new_idx = hierarchy.index(new_category)
 
+                        # Handle conflicts if the categories are the same
                         if old_idx == new_idx and old_val != val:
                             # Same category — conflict
                             if config.conflict_resolver is not None:
@@ -280,3 +336,8 @@ class DictWithProvenance(dict):
 
         for key, val in new_provs.items():
             self[key].provenance = val
+
+
+from ._list import ListWithProvenance  # noqa: E402 — deferred to break circular import
+
+PROVENANCE_MAPPINGS = (DictWithProvenance, ListWithProvenance)

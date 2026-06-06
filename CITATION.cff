@@ -1,13 +1,13 @@
 cff-version: 1.2.0
 message: "If you use yaml-provenance, please cite using the metadata below."
 authors:
-- family-names: "Andrés-Martínez"
-  given-names: "Miguel"
-  orcid: "https://orcid.org/0000-0002-1525-5546"
-  affiliation: "Alfred-Wegener-Institut Helmholtz-Zentrum für Polar- und Meeresforschung"
 - family-names: "Gierz"
   given-names: "Paul"
   orcid: "https://orcid.org/0000-0002-4512-087X"
+  affiliation: "Alfred-Wegener-Institut Helmholtz-Zentrum für Polar- und Meeresforschung"]
+- family-names: "Andrés-Martínez"
+  given-names: "Miguel"
+  orcid: "https://orcid.org/0000-0002-1525-5546"
   affiliation: "Alfred-Wegener-Institut Helmholtz-Zentrum für Polar- und Meeresforschung"
 - family-names: "Shafeeque"
   given-names: "Muhammad"

@@ -5,6 +5,7 @@ Decorator for preserving provenance in recursive functions.
 import copy
 
 from ._config import get_config
+from ._provenance import Provenance
 from ._wrapper import wrapper_with_provenance_factory
 
 
@@ -41,7 +42,6 @@ def keep_provenance_in_recursive_function(func):
             if config.track_history:
                 provenance = copy.deepcopy(rhs.provenance)
             else:
-                from ._provenance import Provenance
                 provenance = Provenance(
                     [rhs.provenance[-1]], track_history=False
                 )
