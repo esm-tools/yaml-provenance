@@ -51,10 +51,15 @@ def keep_provenance_in_recursive_function(func):
                 if config.track_history:
                     output = copy.deepcopy(output)
 
+                # If the new value has an inherited provenance, keep it (i.e. variable
+                # was called: rhs = ${fesom.namelist_dir}, output =
+                # /actual/path/with/provenance/to/be/kept})
                 if hasattr(output, "provenance"):
                     if modify_prov:
                         provenance.extend_and_modified_by(output.provenance, func)
                     output.provenance = provenance
+                # If the rhs.provenance is not None and output has no provenance, keep
+                # the old provenance
                 elif provenance is not None:
                     if modify_prov:
                         provenance.append_last_step_modified_by(func)

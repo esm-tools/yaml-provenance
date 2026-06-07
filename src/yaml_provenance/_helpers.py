@@ -37,7 +37,7 @@ def clean_provenance(data, key_transform=None):
     # Clean vars in objects
     elif hasattr(data, "__dict__"):
         for key, value in vars(data).items():
-            setattr(data, key, clean_provenance(value, nested=True))
+            setattr(data, key, clean_provenance(value))
         return data
     else:
         return data

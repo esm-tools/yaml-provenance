@@ -9,6 +9,9 @@ from ._config import get_config
 # Registry of dynamically created WithProvenance classes
 _wrapper_registry = {}
 
+# Populated on first call to wrapper_with_provenance_factory to avoid circular imports
+_PROVENANCE_MAPPINGS = None
+
 
 # ========================================================
 # PROVENANCE WRAPPER FACTORY CLASS METHODS AND PROPERTIES
@@ -16,7 +19,8 @@ _wrapper_registry = {}
 @classmethod
 def wrapper_with_provenance_new(cls, *args, **kwargs):
     """
-    ``__new__`` method for WithProvenance classes. Required for ``copy.deepcopy``.
+    ``__new__`` method for WithProvenance classes. Required for ``copy.deepcopy``,
+    without this ``copy.deepcopy`` breaks.
     """
     return super(cls, cls).__new__(cls, args[1])
 
@@ -24,7 +28,8 @@ def wrapper_with_provenance_new(cls, *args, **kwargs):
 def wrapper_with_provenance_init(self, value, provenance=None):
     """
     ``__init__`` method for WithProvenance classes. Adds the ``provenance``
-    attribute as a ``Provenance`` instance.
+    attribute as a ``Provenance`` instance. It also stores the original ``value`` to the
+    ``self.value`` attribute.
 
     Parameters
     ----------
@@ -43,7 +48,14 @@ def wrapper_with_provenance_init(self, value, provenance=None):
 
 @property
 def prop_provenance(self):
-    """Property getter for provenance."""
+    """
+    Property getter for provenance.
+
+    Returns
+    -------
+    self._provenance : esm_parser.provenance.Provenance
+        The provenance history stored in ``self._provenance``
+    """
     return self._provenance
 
 
@@ -52,6 +64,11 @@ def prop_provenance(self, new_provenance):
     """
     Setter for the ``provenance`` property. Ensures the value is a ``Provenance``
     instance.
+
+    Parameters
+    ----------
+    new_provenance : esm_parser.provenance.Provenance
+        New provenance history to be set
 
     Raises
     ------
@@ -98,7 +115,9 @@ class BoolWithProvenance(ProvenanceClassForTheUnsubclassable):
     """
     Class for emulating ``bool`` behaviour with provenance.
 
-    ``isinstance(obj, bool)`` returns ``True``.
+    * ``isinstance(<obj>, bool)`` returns ``True``
+    * ``<True_obj> == True`` returns ``True``
+    * ``<True_obj> is True`` returns ``False``. This is not reproducing the behavior!
     """
 
     @property
@@ -110,7 +129,9 @@ class NoneWithProvenance(ProvenanceClassForTheUnsubclassable):
     """
     Class for emulating ``None`` behaviour with provenance.
 
-    ``isinstance(obj, type(None))`` returns ``True``.
+    * ``isinstance(<obj>, None)`` returns ``True``
+    * ``<obj> == None`` returns ``True``
+    * ``<obj> is None`` returns ``False``. This is not reproducing the behavior!
     """
 
     @property
@@ -142,10 +163,11 @@ def wrapper_with_provenance_factory(value, provenance=None):
     object
         The value wrapped with provenance tracking.
     """
-    # Avoid circular import
-    from ._dict import DictWithProvenance
-    from ._list import ListWithProvenance
-    PROVENANCE_MAPPINGS = (DictWithProvenance, ListWithProvenance)
+    global _PROVENANCE_MAPPINGS
+    if _PROVENANCE_MAPPINGS is None:
+        from ._dict import DictWithProvenance
+        from ._list import ListWithProvenance
+        _PROVENANCE_MAPPINGS = (DictWithProvenance, ListWithProvenance)
 
     config = get_config()
 
@@ -160,7 +182,7 @@ def wrapper_with_provenance_factory(value, provenance=None):
     elif value is None:
         return NoneWithProvenance(value, provenance)
 
-    elif isinstance(value, PROVENANCE_MAPPINGS):
+    elif isinstance(value, _PROVENANCE_MAPPINGS):
         return value
 
     else:
@@ -180,6 +202,7 @@ def wrapper_with_provenance_factory(value, provenance=None):
                 },
             )
 
+        # Instantiate the subclass with the given value and provenance
         return _wrapper_registry[class_name](value, provenance)
 
 
