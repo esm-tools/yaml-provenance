@@ -67,25 +67,25 @@ def _format_provenance_comment(provenance):
     return comment
 
 
-def _add_eol_comments(commented_config, config):
+def _add_eol_comments(commented_data, data):
     """
     Recursively add end-of-line provenance comments to a ruamel.yaml
     ``CommentedMap`` / ``CommentedSeq``.
 
     Parameters
     ----------
-    commented_config : CommentedMap or CommentedSeq
+    commented_data : CommentedMap or CommentedSeq
         The ruamel.yaml structure to annotate (modified in-place).
-    config : DictWithProvenance or ListWithProvenance
-        The provenance-tracked config to read provenance from.
+    data : DictWithProvenance or ListWithProvenance
+        The provenance-tracked data to read provenance from.
     """
-    if isinstance(commented_config, dict):
-        for key, cvalue in commented_config.items():
-            if not isinstance(config, dict):
+    if isinstance(commented_data, dict):
+        for key, cvalue in commented_data.items():
+            if not isinstance(data, dict):
                 continue
-            pvalue = config.get(key)
-            if pvalue is None and key not in config:
-                commented_config.yaml_add_eol_comment("no provenance", key)
+            pvalue = data.get(key)
+            if pvalue is None and key not in data:
+                commented_data.yaml_add_eol_comment("no provenance", key)
                 continue
             if isinstance(cvalue, (dict, list)):
                 if isinstance(pvalue, (dict, list)):
@@ -93,26 +93,26 @@ def _add_eol_comments(commented_config, config):
             else:
                 provenance = getattr(pvalue, "provenance", [None])[-1]
                 comment = _format_provenance_comment(provenance)
-                commented_config.yaml_add_eol_comment(comment, key)
+                commented_data.yaml_add_eol_comment(comment, key)
 
-    elif isinstance(commented_config, list):
-        for indx, cvalue in enumerate(commented_config):
-            if not isinstance(config, list) or indx >= len(config):
+    elif isinstance(commented_data, list):
+        for indx, cvalue in enumerate(commented_data):
+            if not isinstance(data, list) or indx >= len(data):
                 continue
-            pvalue = config[indx]
+            pvalue = data[indx]
             if isinstance(cvalue, (dict, list)):
                 if isinstance(pvalue, (dict, list)):
                     _add_eol_comments(cvalue, pvalue)
             else:
                 provenance = getattr(pvalue, "provenance", [None])[-1]
                 comment = _format_provenance_comment(provenance)
-                commented_config.yaml_add_eol_comment(comment, indx)
+                commented_data.yaml_add_eol_comment(comment, indx)
 
 
-def dump_yaml(config, filepath=None, stream=None):
+def dump_yaml(data, filepath=None, stream=None):
     """
-    Dump a provenance-tracked config to YAML with end-of-line provenance
-    comments.
+    Dump a provenance-tracked data structure to YAML with end-of-line
+    provenance comments.
 
     Each scalar value is annotated with an end-of-line comment showing the
     source file, line, and column where the value originated. Values added
@@ -123,8 +123,8 @@ def dump_yaml(config, filepath=None, stream=None):
 
     Parameters
     ----------
-    config : DictWithProvenance or ListWithProvenance
-        The provenance-tracked configuration to dump.
+    data : DictWithProvenance or ListWithProvenance
+        The provenance-tracked data to dump.
     filepath : str or Path or None
         Destination file path. Used when ``stream`` is not given.
         If both are ``None``, output goes to stdout.
@@ -158,23 +158,23 @@ def dump_yaml(config, filepath=None, stream=None):
     my_yaml.representer.add_representer(ListWithProvenance, _list_representer)
 
     # Strip provenance wrappers to get plain Python values.
-    config_clean = clean_provenance(config)
+    clean_data = clean_provenance(data)
 
     # Dump to an intermediate string so we can reload into a CommentedMap
     # (ruamel.yaml's round-trip type), which supports adding EOL comments.
     intermediate = StringIO()
-    my_yaml.dump(config_clean, intermediate)
+    my_yaml.dump(clean_data, intermediate)
 
     intermediate.seek(0)
-    config_with_comments = my_yaml.load(intermediate)
+    commented_data = my_yaml.load(intermediate)
 
     # Walk both structures simultaneously and attach provenance comments.
-    _add_eol_comments(config_with_comments, config)
+    _add_eol_comments(commented_data, data)
 
     if stream is not None:
-        my_yaml.dump(config_with_comments, stream)
+        my_yaml.dump(commented_data, stream)
     elif filepath is not None:
         with open(filepath, "w") as f:
-            my_yaml.dump(config_with_comments, f)
+            my_yaml.dump(commented_data, f)
     else:
-        my_yaml.dump(config_with_comments, sys.stdout)
+        my_yaml.dump(commented_data, sys.stdout)

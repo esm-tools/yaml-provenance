@@ -11,6 +11,16 @@ class Provenance(list):
     at a point in its history. Supports both full history tracking and lightweight
     mode (at most 1 element).
 
+    To assign the provenance to a value, instanciate it as an attribute of that value
+    (i.e. ``self.provenance = Provenance(my_provenance)``). To be used from the
+    ``WithProvenance`` classes created by ``wrapper_with_provenance_factory``.
+
+    The following class methods provide the extended functionality to lists:
+    * ``self.append_last_step_modified_by``: to duplicate the last element of the list
+        and add to it information about the function that is modifying the value
+    * ``self.extend_and_modified_by``: to extend a list while including in the
+        provenance the function which is responsible for extending it
+
     Parameters
     ----------
     provenance_data : list or dict
@@ -57,7 +67,10 @@ class Provenance(list):
 
     def extend_and_modified_by(self, additional_provenance, func):
         """
-        Extends the current provenance history with ``additional_provenance``.
+        Extends the current provenance history with ``additional_provenance``. This
+        happens when for example a variable comes originally from a file, but then the
+        value is overwritten by another value that comes from a file higher in the
+        hierarchy. This method keeps both history elements.
 
         In lightweight mode, replaces the single element instead of extending.
 
@@ -70,12 +83,16 @@ class Provenance(list):
         """
         if self._track_history:
             new_additional_provenance = additional_provenance
+            # If the new provenance is not identical to the current one extend the
+            # provenance
             if new_additional_provenance is not self:
                 for elem in new_additional_provenance:
                     new_additional_provenance.add_modified_by(
                         elem, func, modified_by="extended_by"
                     )
                 self.extend(new_additional_provenance)
+            # If the new provenance is identical just mark the variable as modified_by
+            # func
             else:
                 self.append_last_step_modified_by(func)
         else:
