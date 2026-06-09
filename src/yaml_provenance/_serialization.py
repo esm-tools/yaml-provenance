@@ -8,63 +8,7 @@ ruamel.yaml without errors.
 
 import json
 
-from ._wrapper import ProvenanceClassForTheUnsubclassable
-
-# Builtin types to reduce to (walking up MRO past ruamel scalars)
-_BUILTIN_TYPES = (str, int, float, bytes, bytearray)
-
-
-def _get_builtin_base(cls):
-    """Return the first plain builtin ancestor of *cls* in its MRO."""
-    for base in cls.__mro__:
-        if base in _BUILTIN_TYPES:
-            return base
-    return cls.__bases__[0]
-
-
-def register_pickle_reducers():
-    """
-    Patch ``__reduce__`` on every WithProvenance class so pickle can handle them.
-
-    Safe to call multiple times; only patches classes not already patched.
-    Should be called after every ``load_yaml()`` since ``_wrapper_registry``
-    grows lazily.
-    """
-    from ._wrapper import _wrapper_registry, BoolWithProvenance, NoneWithProvenance
-    from ._dict import DictWithProvenance
-    from ._list import ListWithProvenance
-
-    def _make_reduce(builtin_type):
-        def __reduce__(self):
-            return (builtin_type, (builtin_type(self),))
-        return __reduce__
-
-    # 1. Dynamic registry types
-    for cls in _wrapper_registry.values():
-        if not getattr(cls, "_pickle_patched", False):
-            builtin = _get_builtin_base(cls)
-            cls.__reduce__ = _make_reduce(builtin)
-            cls._pickle_patched = True
-
-    # 2. BoolWithProvenance
-    if not getattr(BoolWithProvenance, "_pickle_patched", False):
-        BoolWithProvenance.__reduce__ = lambda self: (bool, (self.value,))
-        BoolWithProvenance._pickle_patched = True
-
-    # 3. NoneWithProvenance
-    if not getattr(NoneWithProvenance, "_pickle_patched", False):
-        NoneWithProvenance.__reduce__ = lambda self: (type(None), ())
-        NoneWithProvenance._pickle_patched = True
-
-    # 4. ListWithProvenance
-    if not getattr(ListWithProvenance, "_pickle_patched", False):
-        ListWithProvenance.__reduce__ = lambda self: (list, (list(self),))
-        ListWithProvenance._pickle_patched = True
-
-    # 5. DictWithProvenance
-    if not getattr(DictWithProvenance, "_pickle_patched", False):
-        DictWithProvenance.__reduce__ = lambda self: (dict, (dict(self),))
-        DictWithProvenance._pickle_patched = True
+from ._wrapper import ProvenanceClassForTheUnsubclassable, _get_builtin_base
 
 
 def register_yaml_representers():

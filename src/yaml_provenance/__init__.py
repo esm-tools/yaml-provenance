@@ -18,7 +18,6 @@ from ._helpers import clean_provenance, wrap_computed, transfer_provenance, anno
 from .yaml_loader import ProvenanceConstructor, ProvenanceLoader, load_yaml
 from ._yaml_dumper import dump_yaml
 from ._serialization import (
-    register_pickle_reducers,
     register_yaml_representers,
     ProvenanceJSONEncoder,
 )
@@ -48,7 +47,6 @@ __all__ = [
     "transfer_provenance",
     "annotate_dict",
     # Serialization
-    "register_pickle_reducers",
     "register_yaml_representers",
     "ProvenanceJSONEncoder",
     # YAML I/O

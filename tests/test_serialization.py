@@ -12,7 +12,6 @@ from ruamel.yaml import YAML
 
 from yaml_provenance import (
     load_yaml,
-    register_pickle_reducers,
     register_yaml_representers,
     ProvenanceJSONEncoder,
     wrapper_with_provenance_factory,
@@ -162,8 +161,7 @@ class TestProvenanceJSONEncoder:
 
 
 class TestDeepcopyAfterPickleReducers:
-    """``copy.deepcopy`` must preserve WithProvenance types even after
-    ``register_pickle_reducers`` patches ``__reduce__``."""
+    """``copy.deepcopy`` must preserve WithProvenance types."""
 
 
     def test_str_deepcopy(self):

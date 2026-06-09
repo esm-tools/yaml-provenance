@@ -90,7 +90,7 @@ def wrapper_with_provenance_deepcopy(self, memo):
 
     ``copy.deepcopy`` checks for ``__deepcopy__`` *before* falling back to
     ``__reduce__``.  The pickle reducers registered by
-    ``register_pickle_reducers`` intentionally reduce to the plain builtin
+    The ``__reduce__`` method intentionally reduces to the plain builtin
     type (e.g. ``str``) so that pickle output is compact.  Without a
     ``__deepcopy__`` override, ``copy.deepcopy`` would use the same
     ``__reduce__`` path and silently discard provenance.
