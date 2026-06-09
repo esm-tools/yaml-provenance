@@ -250,7 +250,10 @@ def wrapper_with_provenance_factory(value, provenance=None):
         return BoolWithProvenance(value, provenance)
 
     elif value is None:
-        return NoneWithProvenance(value, provenance)
+        # Return plain None so that `x is None` identity checks work as expected.
+        # NoneWithProvenance breaks Python's idiomatic `is None` test (PEP 8).
+        # Provenance on a None value is inaccessible anyway (None has no attributes).
+        return None
 
     elif isinstance(value, PROVENANCE_MAPPINGS):
         return value

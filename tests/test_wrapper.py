@@ -5,7 +5,6 @@ Tests for the WithProvenance wrapper factory.
 from yaml_provenance import (
     wrapper_with_provenance_factory,
     BoolWithProvenance,
-    NoneWithProvenance,
     Provenance,
 )
 
@@ -39,10 +38,9 @@ def test_wrap_bool():
 
 
 def test_wrap_none():
+    # The factory returns plain None — NoneWithProvenance breaks `is None` (PEP 8).
     val = wrapper_with_provenance_factory(None, {"line": 5})
-    assert val == None
-    assert isinstance(val, NoneWithProvenance)
-    assert val.provenance[-1] == {"line": 5}
+    assert val is None
 
 
 def test_wrap_preserves_value():
