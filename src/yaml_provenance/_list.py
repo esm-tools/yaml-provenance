@@ -6,7 +6,7 @@ import copy
 
 from ._config import get_config
 from ._provenance import Provenance
-from ._wrapper import wrapper_with_provenance_factory
+from ._wrapper import wrapper_with_provenance_factory, _try_register_yaml_representer
 
 
 def _list_deepcopy(self, memo):
@@ -170,3 +170,6 @@ class ListWithProvenance(list):
         Call the original ``list.__setitem__`` without provenance tracking.
         """
         super().__setitem__(indx, val)
+
+
+_try_register_yaml_representer(ListWithProvenance, value_fn=list)

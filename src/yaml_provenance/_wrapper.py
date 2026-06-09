@@ -30,6 +30,40 @@ def _make_pickle_reduce(builtin_type):
     return __reduce__
 
 
+def _try_register_yaml_representer(cls, base_type=None, value_fn=None):
+    """Register *cls* with ruamel.yaml's SafeRepresenter and RoundTripRepresenter.
+
+    No-op if ruamel.yaml is not installed.
+
+    Parameters
+    ----------
+    cls : type
+        The WithProvenance class to register.
+    base_type : type or None
+        Explicit base type to look up the representer for. If ``None``,
+        uses ``_get_builtin_base(cls)``.
+    value_fn : callable or None
+        Called as ``value_fn(data)`` to produce the value passed to the
+        base representer. If ``None``, passes *data* directly (works for
+        subclassable builtins like ``str``, ``int``).
+    """
+    try:
+        from ruamel.yaml.representer import SafeRepresenter, RoundTripRepresenter
+    except ImportError:
+        return
+    for repr_class in (SafeRepresenter, RoundTripRepresenter):
+        lookup_type = base_type if base_type is not None else _get_builtin_base(cls)
+        fn = repr_class.yaml_representers.get(lookup_type)
+        if fn:
+            if value_fn is not None:
+                repr_class.add_representer(
+                    cls,
+                    lambda dumper, data, _fn=fn, _vfn=value_fn: _fn(dumper, _vfn(data)),
+                )
+            else:
+                repr_class.add_representer(cls, fn)
+
+
 # ========================================================
 # PROVENANCE WRAPPER FACTORY CLASS METHODS AND PROPERTIES
 # ========================================================
@@ -239,8 +273,14 @@ def wrapper_with_provenance_factory(value, provenance=None):
                     "__reduce__": _make_pickle_reduce(_get_builtin_base(subtype)),
                 },
             )
+            _try_register_yaml_representer(_wrapper_registry[class_name])
 
         return _wrapper_registry[class_name](value, provenance)
+
+
+# Register YAML representers for the unsubclassable types at definition time
+_try_register_yaml_representer(BoolWithProvenance, base_type=bool, value_fn=lambda d: d.value)
+_try_register_yaml_representer(NoneWithProvenance, base_type=type(None), value_fn=lambda d: None)
 
 
 def get_wrapper_class(class_name):

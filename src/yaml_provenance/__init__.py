@@ -17,10 +17,7 @@ from ._decorator import keep_provenance_in_recursive_function
 from ._helpers import clean_provenance, wrap_computed, transfer_provenance, annotate_dict
 from .yaml_loader import ProvenanceConstructor, ProvenanceLoader, load_yaml
 from ._yaml_dumper import dump_yaml
-from ._serialization import (
-    register_yaml_representers,
-    ProvenanceJSONEncoder,
-)
+from ._serialization import ProvenanceJSONEncoder
 
 __all__ = [
     # Config
@@ -47,7 +44,6 @@ __all__ = [
     "transfer_provenance",
     "annotate_dict",
     # Serialization
-    "register_yaml_representers",
     "ProvenanceJSONEncoder",
     # YAML I/O
     "ProvenanceConstructor",

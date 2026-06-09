@@ -9,7 +9,7 @@ from loguru import logger
 from ._config import get_config
 from ._exceptions import CategoryConflictError
 from ._provenance import Provenance
-from ._wrapper import wrapper_with_provenance_factory
+from ._wrapper import wrapper_with_provenance_factory, _try_register_yaml_representer
 
 
 def _dict_deepcopy(self, memo):
@@ -309,3 +309,6 @@ class DictWithProvenance(dict):
 
         for key, val in new_provs.items():
             self[key].provenance = val
+
+
+_try_register_yaml_representer(DictWithProvenance, value_fn=dict)

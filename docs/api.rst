@@ -74,7 +74,5 @@ Helpers
 Serialization
 -------------
 
-.. autofunction:: yaml_provenance.register_yaml_representers
-
 .. autoclass:: yaml_provenance.ProvenanceJSONEncoder
    :members:

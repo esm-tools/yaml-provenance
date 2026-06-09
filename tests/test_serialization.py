@@ -12,7 +12,6 @@ from ruamel.yaml import YAML
 
 from yaml_provenance import (
     load_yaml,
-    register_yaml_representers,
     ProvenanceJSONEncoder,
     wrapper_with_provenance_factory,
     BoolWithProvenance,
