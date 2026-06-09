@@ -123,7 +123,12 @@ def _add_eol_comments(commented_config, config):
                         comment = _format_provenance_comment(prov)
                         commented_config.yaml_add_eol_comment(comment, key)
             else:
-                provenance = getattr(pvalue, "provenance", [None])[-1]
+                if pvalue is None:
+                    # Null value — the value itself has no provenance attr.
+                    # Fall back to the key's own provenance (same file/line).
+                    provenance = _key_provenance(config, key)
+                else:
+                    provenance = getattr(pvalue, "provenance", [None])[-1]
                 comment = _format_provenance_comment(provenance)
                 commented_config.yaml_add_eol_comment(comment, key)
 
