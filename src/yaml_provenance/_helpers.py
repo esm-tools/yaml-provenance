@@ -87,15 +87,12 @@ def transfer_provenance(original, result):
     Returns
     -------
     object
-        *result* with *original*'s provenance, or *result* as-is.
+        *result* with *original*'s full provenance history, or *result* as-is.
     """
     prov = getattr(original, "provenance", None)
     if not prov:
         return result
-    try:
-        return wrapper_with_provenance_factory(result, prov[-1])
-    except Exception:
-        return result
+    return wrapper_with_provenance_factory(result, prov)
 
 
 def annotate_dict(d, source_prefix):

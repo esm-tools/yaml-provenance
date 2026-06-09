@@ -72,6 +72,13 @@ class TestTransferProvenance:
         assert hasattr(result, "provenance")
         assert result.provenance[-1]["yaml_file"] == "src.num"
 
+    def test_transfers_full_history(self):
+        original = wrap_computed(42, "src.num")
+        intermediate = transfer_provenance(original, 84)
+        result = transfer_provenance(intermediate, 168)
+        assert len(result.provenance) == len(original.provenance)
+        assert result.provenance[-1]["yaml_file"] == "src.num"
+
 
 # ── annotate_dict ────────────────────────────────────────────────────────
 
