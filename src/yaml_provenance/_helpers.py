@@ -100,6 +100,8 @@ def annotate_dict(d, source_prefix):
     Wrap every scalar leaf of *d* with a per-key provenance source in-place.
 
     For each key ``K``, the source is ``<source_prefix>.<K>``.
+    Keys that contain a ``.`` are quoted (e.g. ``prefix["a.b"]``) to avoid
+    ambiguity with nested-key notation.
     Recurses into nested dicts.  Leaves that already carry provenance are
     left untouched.
 
@@ -116,8 +118,10 @@ def annotate_dict(d, source_prefix):
         The annotated dict.
     """
     for key, value in d.items():
+        key_str = str(key)
+        source_key = f'["{key_str}"]' if "." in key_str else f".{key_str}"
         if isinstance(value, dict):
-            annotate_dict(value, source_prefix)
+            annotate_dict(value, f"{source_prefix}{source_key}")
         elif not hasattr(value, "provenance"):
-            d[key] = wrap_computed(value, f"{source_prefix}.{key}")
+            d[key] = wrap_computed(value, f"{source_prefix}{source_key}")
     return d

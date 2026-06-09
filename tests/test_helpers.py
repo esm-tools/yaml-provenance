@@ -97,7 +97,12 @@ class TestAnnotateDict:
         d = {"outer": {"inner": 99}}
         annotate_dict(d, "app")
         assert hasattr(d["outer"]["inner"], "provenance")
-        assert d["outer"]["inner"].provenance[-1]["yaml_file"] == "app.inner"
+        assert d["outer"]["inner"].provenance[-1]["yaml_file"] == "app.outer.inner"
+
+    def test_key_with_dot(self):
+        d = {"a.b": 1}
+        annotate_dict(d, "cfg")
+        assert d["a.b"].provenance[-1]["yaml_file"] == 'cfg["a.b"]'
 
     def test_skips_already_wrapped(self):
         val = wrap_computed("existing", "original.source")
