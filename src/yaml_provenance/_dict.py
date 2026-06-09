@@ -9,7 +9,31 @@ from loguru import logger
 from ._config import get_config
 from ._exceptions import CategoryConflictError
 from ._provenance import Provenance
-from ._wrapper import wrapper_with_provenance_factory
+from ._wrapper import wrapper_with_provenance_factory, _try_register_yaml_representer, NoneWithProvenance
+
+
+def _dict_deepcopy(self, memo):
+    """
+    ``__deepcopy__`` for DictWithProvenance.
+
+    Returns a DictWithProvenance whose keys, values and provenance are all
+    deep-copied.  Without this, ``copy.deepcopy`` falls through to
+    ``__reduce__`` which reduces the container to a plain ``dict``.
+    """
+    obj_id = id(self)
+    if obj_id in memo:
+        return memo[obj_id]
+    new_dict = {copy.deepcopy(k, memo): copy.deepcopy(v, memo) for k, v in self.items()}
+    prov = self.get_provenance()
+    new_prov = copy.deepcopy(prov, memo)
+    new_obj = DictWithProvenance.__new__(DictWithProvenance)
+    memo[obj_id] = new_obj
+    dict.__init__(new_obj, new_dict)
+    new_obj._config = self._config
+    new_obj.custom_setitem = False
+    new_obj.put_provenance(new_prov)
+    new_obj.custom_setitem = True
+    return new_obj
 
 
 class DictWithProvenance(dict):
@@ -38,6 +62,11 @@ class DictWithProvenance(dict):
         self.custom_setitem = False
         self.put_provenance(provenance)
         self.custom_setitem = True
+
+    __deepcopy__ = _dict_deepcopy
+
+    def __reduce__(self):
+        return (dict, (dict(self),))
 
     def put_provenance(self, provenance):
         """
@@ -90,6 +119,9 @@ class DictWithProvenance(dict):
                 self[key].set_provenance(provenance)
             elif hasattr(val, "provenance"):
                 self[key].provenance.extend(provenance)
+            elif val is None:
+                # Plain None can't hold provenance; use NoneWithProvenance explicitly.
+                self[key] = NoneWithProvenance(val, provenance)
             else:
                 self[key] = wrapper_with_provenance_factory(val, provenance)
 
@@ -280,3 +312,6 @@ class DictWithProvenance(dict):
 
         for key, val in new_provs.items():
             self[key].provenance = val
+
+
+_try_register_yaml_representer(DictWithProvenance, value_fn=dict)

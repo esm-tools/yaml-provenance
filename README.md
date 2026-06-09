@@ -46,6 +46,9 @@ configure(ProvenanceConfig(track_history=True))
 - Configurable category hierarchy for conflict resolution
 - Works with any YAML-based configuration system
 - Lightweight mode (default) for minimal overhead
+- Serialization support — pickle, JSON (`ProvenanceJSONEncoder`), and ruamel.yaml roundtrip
+- `copy.deepcopy` preserves provenance on all wrapper types
+- Helper functions for computed / programmatic values (`wrap_computed`, `transfer_provenance`, `annotate_dict`)
 
 ## License
 

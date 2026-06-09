@@ -2,12 +2,66 @@
 WithProvenance wrapper factory — creates provenance-aware subclasses dynamically.
 """
 
+import copy
+
 from ._provenance import Provenance
 from ._config import get_config
 
 
 # Registry of dynamically created WithProvenance classes
 _wrapper_registry = {}
+
+# Builtin types whose subclasses can be reduced to the builtin for pickling
+_BUILTIN_TYPES = (str, int, float, bytes, bytearray)
+
+
+def _get_builtin_base(cls):
+    """Return the first plain builtin ancestor of *cls* in its MRO."""
+    for base in cls.__mro__:
+        if base in _BUILTIN_TYPES:
+            return base
+    return cls.__bases__[0]
+
+
+def _make_pickle_reduce(builtin_type):
+    """Create a ``__reduce__`` that reduces to the plain *builtin_type*."""
+    def __reduce__(self):
+        return (builtin_type, (builtin_type(self),))
+    return __reduce__
+
+
+def _try_register_yaml_representer(cls, base_type=None, value_fn=None):
+    """Register *cls* with ruamel.yaml's SafeRepresenter and RoundTripRepresenter.
+
+    No-op if ruamel.yaml is not installed.
+
+    Parameters
+    ----------
+    cls : type
+        The WithProvenance class to register.
+    base_type : type or None
+        Explicit base type to look up the representer for. If ``None``,
+        uses ``_get_builtin_base(cls)``.
+    value_fn : callable or None
+        Called as ``value_fn(data)`` to produce the value passed to the
+        base representer. If ``None``, passes *data* directly (works for
+        subclassable builtins like ``str``, ``int``).
+    """
+    try:
+        from ruamel.yaml.representer import SafeRepresenter, RoundTripRepresenter
+    except ImportError:
+        return
+    for repr_class in (SafeRepresenter, RoundTripRepresenter):
+        lookup_type = base_type if base_type is not None else _get_builtin_base(cls)
+        fn = repr_class.yaml_representers.get(lookup_type)
+        if fn:
+            if value_fn is not None:
+                repr_class.add_representer(
+                    cls,
+                    lambda dumper, data, _fn=fn, _vfn=value_fn: _fn(dumper, _vfn(data)),
+                )
+            else:
+                repr_class.add_representer(cls, fn)
 
 
 # ========================================================
@@ -65,6 +119,27 @@ def prop_provenance(self, new_provenance):
     self._provenance = new_provenance
 
 
+def wrapper_with_provenance_deepcopy(self, memo):
+    """``__deepcopy__`` for WithProvenance subclasses.
+
+    ``copy.deepcopy`` checks for ``__deepcopy__`` *before* falling back to
+    ``__reduce__``.  The pickle reducers registered by
+    The ``__reduce__`` method intentionally reduces to the plain builtin
+    type (e.g. ``str``) so that pickle output is compact.  Without a
+    ``__deepcopy__`` override, ``copy.deepcopy`` would use the same
+    ``__reduce__`` path and silently discard provenance.
+    """
+    obj_id = id(self)
+    if obj_id in memo:
+        return memo[obj_id]
+    new = wrapper_with_provenance_factory(
+        type(self).__mro__[1](self),  # plain builtin value (str, int, …)
+        copy.deepcopy(self._provenance, memo),
+    )
+    memo[obj_id] = new
+    return new
+
+
 # =======================================================
 # CLASSES FOR THE UNSUBCLASSABLE CLASSES (BOOL AND NONE)
 # =======================================================
@@ -89,9 +164,20 @@ class ProvenanceClassForTheUnsubclassable:
         return hash(self.value)
 
 
+def _unsubclassable_deepcopy(self, memo):
+    """``__deepcopy__`` for Bool/NoneWithProvenance."""
+    obj_id = id(self)
+    if obj_id in memo:
+        return memo[obj_id]
+    new = type(self)(self.value, copy.deepcopy(self._provenance, memo))
+    memo[obj_id] = new
+    return new
+
+
 # Add the class attributes common to all WithProvenance classes
 ProvenanceClassForTheUnsubclassable.__init__ = wrapper_with_provenance_init
 ProvenanceClassForTheUnsubclassable.provenance = prop_provenance
+ProvenanceClassForTheUnsubclassable.__deepcopy__ = _unsubclassable_deepcopy
 
 
 class BoolWithProvenance(ProvenanceClassForTheUnsubclassable):
@@ -100,6 +186,9 @@ class BoolWithProvenance(ProvenanceClassForTheUnsubclassable):
 
     ``isinstance(obj, bool)`` returns ``True``.
     """
+
+    def __reduce__(self):
+        return (bool, (self.value,))
 
     @property
     def __class__(self):
@@ -112,6 +201,9 @@ class NoneWithProvenance(ProvenanceClassForTheUnsubclassable):
 
     ``isinstance(obj, type(None))`` returns ``True``.
     """
+
+    def __reduce__(self):
+        return (type(None), ())
 
     @property
     def __class__(self):
@@ -158,7 +250,10 @@ def wrapper_with_provenance_factory(value, provenance=None):
         return BoolWithProvenance(value, provenance)
 
     elif value is None:
-        return NoneWithProvenance(value, provenance)
+        # Return plain None so that `x is None` identity checks work as expected.
+        # NoneWithProvenance breaks Python's idiomatic `is None` test (PEP 8).
+        # Provenance on a None value is inaccessible anyway (None has no attributes).
+        return None
 
     elif isinstance(value, PROVENANCE_MAPPINGS):
         return value
@@ -177,10 +272,18 @@ def wrapper_with_provenance_factory(value, provenance=None):
                     "__new__": wrapper_with_provenance_new,
                     "__init__": wrapper_with_provenance_init,
                     "provenance": prop_provenance,
+                    "__deepcopy__": wrapper_with_provenance_deepcopy,
+                    "__reduce__": _make_pickle_reduce(_get_builtin_base(subtype)),
                 },
             )
+            _try_register_yaml_representer(_wrapper_registry[class_name])
 
         return _wrapper_registry[class_name](value, provenance)
+
+
+# Register YAML representers for the unsubclassable types at definition time
+_try_register_yaml_representer(BoolWithProvenance, base_type=bool, value_fn=lambda d: d.value)
+_try_register_yaml_representer(NoneWithProvenance, base_type=type(None), value_fn=lambda d: None)
 
 
 def get_wrapper_class(class_name):

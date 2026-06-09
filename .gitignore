@@ -12,3 +12,6 @@ docs/_build/
 *.swo
 *~
 .DS_Store
+
+venv/
+.venv/
