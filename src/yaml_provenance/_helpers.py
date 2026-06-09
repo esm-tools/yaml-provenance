@@ -2,7 +2,7 @@
 Helper functions for provenance operations.
 """
 
-from ._wrapper import wrapper_with_provenance_factory
+from ._wrapper import wrapper_with_provenance_factory, NoneWithProvenance
 
 
 def clean_provenance(data):
@@ -64,6 +64,8 @@ def wrap_computed(value, source):
         "category": None,
         "subcategory": None,
     }
+    if value is None:
+        return NoneWithProvenance(value, provenance)
     return wrapper_with_provenance_factory(value, provenance)
 
 
