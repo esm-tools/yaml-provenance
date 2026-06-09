@@ -8,6 +8,8 @@ ruamel.yaml without errors.
 
 import json
 
+from ._wrapper import ProvenanceClassForTheUnsubclassable
+
 # Builtin types to reduce to (walking up MRO past ruamel scalars)
 _BUILTIN_TYPES = (str, int, float, bytes, bytearray)
 
@@ -151,7 +153,6 @@ class ProvenanceJSONEncoder(json.JSONEncoder):
     """
 
     def default(self, obj):
-        from ._wrapper import ProvenanceClassForTheUnsubclassable
         if isinstance(obj, ProvenanceClassForTheUnsubclassable):
             return obj.value
         return super().default(obj)

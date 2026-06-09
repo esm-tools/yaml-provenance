@@ -2,6 +2,8 @@
 Helper functions for provenance operations.
 """
 
+from ._wrapper import wrapper_with_provenance_factory
+
 
 def clean_provenance(data):
     """
@@ -55,8 +57,6 @@ def wrap_computed(value, source):
     object
         Provenance-wrapped value.
     """
-    from ._wrapper import wrapper_with_provenance_factory
-
     provenance = {
         "yaml_file": source,
         "line": 0,
@@ -89,8 +89,6 @@ def transfer_provenance(original, result):
     object
         *result* with *original*'s provenance, or *result* as-is.
     """
-    from ._wrapper import wrapper_with_provenance_factory
-
     prov = getattr(original, "provenance", None)
     if not prov:
         return result
