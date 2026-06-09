@@ -8,7 +8,15 @@ ruamel.yaml without errors.
 
 import json
 
-from ._wrapper import ProvenanceClassForTheUnsubclassable, _get_builtin_base
+from ._wrapper import (
+    ProvenanceClassForTheUnsubclassable,
+    _get_builtin_base,
+    _wrapper_registry,
+    BoolWithProvenance,
+    NoneWithProvenance,
+)
+from ._dict import DictWithProvenance
+from ._list import ListWithProvenance
 
 
 def register_yaml_representers():
@@ -18,10 +26,6 @@ def register_yaml_representers():
     Should be called after every ``load_yaml()`` since ``_wrapper_registry``
     grows lazily.
     """
-    from ._wrapper import _wrapper_registry, BoolWithProvenance, NoneWithProvenance
-    from ._dict import DictWithProvenance
-    from ._list import ListWithProvenance
-
     try:
         from ruamel.yaml.representer import SafeRepresenter, RoundTripRepresenter
     except ImportError:

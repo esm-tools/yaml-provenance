@@ -23,7 +23,7 @@ src/yaml_provenance/
 ├── _list.py            # ListWithProvenance(list) — recursive provenance on lists
 ├── _decorator.py       # @keep_provenance_in_recursive_function decorator
 ├── _helpers.py         # clean_provenance(), wrap_computed(), transfer_provenance(), annotate_dict()
-├── _serialization.py   # register_pickle_reducers(), register_yaml_representers(), ProvenanceJSONEncoder
+├── _serialization.py   # register_yaml_representers(), ProvenanceJSONEncoder
 ├── yaml_loader.py      # ProvenanceConstructor, ProvenanceLoader, load_yaml()
 └── _yaml_dumper.py     # dump_yaml(), _format_provenance_comment(), _add_eol_comments()
 ```
@@ -103,7 +103,7 @@ Tests live in `tests/`. Run with `pytest`. Key test files:
 - `test_lightweight.py` — Lightweight mode behavior
 - `test_yaml_loader.py` — YAML loading with provenance
 - `test_yaml_dumper.py` — dump_yaml() with provenance comments
-- `test_new_helpers.py` — wrap_computed(), transfer_provenance(), annotate_dict()
+- `test_helpers.py` — wrap_computed(), transfer_provenance(), annotate_dict()
 - `test_serialization.py` — pickle, JSON, and YAML serialization of WithProvenance types
 
 Test fixtures are in `tests/fixtures/`.

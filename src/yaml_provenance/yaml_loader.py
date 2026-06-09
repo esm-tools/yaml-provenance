@@ -120,15 +120,12 @@ class ProvenanceLoader:
             if _is_prov_tuple(raw_key):
                 raw_key_val = raw_key[0]
                 key_line, key_col = raw_key[1]
-                if isinstance(raw_key_val, str):
-                    key = _wrap(raw_key_val, {
-                        "line": key_line, "col": key_col,
-                        "yaml_file": filepath,
-                        "category": category,
-                        "subcategory": subcategory,
-                    })
-                else:
-                    key = raw_key_val
+                key = _wrap(raw_key_val, {
+                    "line": key_line, "col": key_col,
+                    "yaml_file": filepath,
+                    "category": category,
+                    "subcategory": subcategory,
+                })
             else:
                 key = raw_key
 
