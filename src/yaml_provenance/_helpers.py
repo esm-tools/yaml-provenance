@@ -34,7 +34,8 @@ def clean_provenance(data):
 
 
 def wrap_computed(value, source):
-    """Wrap a value with provenance pointing to *source*.
+    """
+    Wrap a value with provenance pointing to *source*.
 
     Used to give meaningful provenance to values injected programmatically
     (not loaded from a YAML file), such as environment variables, computed
@@ -67,7 +68,8 @@ def wrap_computed(value, source):
 
 
 def transfer_provenance(original, result):
-    """Return *result* wrapped with the provenance of *original*.
+    """
+    Return *result* wrapped with the provenance of *original*.
 
     Used when a string operation (``str.upper()``, ``str.strip()``, etc.)
     produces a plain ``str`` from a WithProvenance subclass, discarding the
@@ -99,7 +101,8 @@ def transfer_provenance(original, result):
 
 
 def annotate_dict(d, source_prefix):
-    """Wrap every scalar leaf of *d* with a per-key provenance source in-place.
+    """
+    Wrap every scalar leaf of *d* with a per-key provenance source in-place.
 
     For each key ``K``, the source is ``<source_prefix>.<K>``.
     Recurses into nested dicts.  Leaves that already carry provenance are

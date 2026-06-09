@@ -10,7 +10,8 @@ from ._wrapper import wrapper_with_provenance_factory
 
 
 def _list_deepcopy(self, memo):
-    """``__deepcopy__`` for ListWithProvenance.
+    """
+    ``__deepcopy__`` for ListWithProvenance.
 
     Returns a ListWithProvenance whose elements and provenance are all
     deep-copied.  Without this, ``copy.deepcopy`` falls through to

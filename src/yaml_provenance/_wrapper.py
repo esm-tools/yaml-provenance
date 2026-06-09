@@ -2,7 +2,7 @@
 WithProvenance wrapper factory — creates provenance-aware subclasses dynamically.
 """
 
-import copy as _copy
+import copy
 
 from ._provenance import Provenance
 from ._config import get_config
@@ -100,7 +100,7 @@ def wrapper_with_provenance_deepcopy(self, memo):
         return memo[obj_id]
     new = wrapper_with_provenance_factory(
         type(self).__mro__[1](self),  # plain builtin value (str, int, …)
-        _copy.deepcopy(self._provenance, memo),
+        copy.deepcopy(self._provenance, memo),
     )
     memo[obj_id] = new
     return new
@@ -135,7 +135,7 @@ def _unsubclassable_deepcopy(self, memo):
     obj_id = id(self)
     if obj_id in memo:
         return memo[obj_id]
-    new = type(self)(self.value, _copy.deepcopy(self._provenance, memo))
+    new = type(self)(self.value, copy.deepcopy(self._provenance, memo))
     memo[obj_id] = new
     return new
 

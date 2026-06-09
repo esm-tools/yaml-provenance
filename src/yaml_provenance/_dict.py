@@ -13,7 +13,8 @@ from ._wrapper import wrapper_with_provenance_factory
 
 
 def _dict_deepcopy(self, memo):
-    """``__deepcopy__`` for DictWithProvenance.
+    """
+    ``__deepcopy__`` for DictWithProvenance.
 
     Returns a DictWithProvenance whose keys, values and provenance are all
     deep-copied.  Without this, ``copy.deepcopy`` falls through to

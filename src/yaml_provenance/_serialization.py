@@ -21,7 +21,8 @@ def _get_builtin_base(cls):
 
 
 def register_pickle_reducers():
-    """Patch ``__reduce__`` on every WithProvenance class so pickle can handle them.
+    """
+    Patch ``__reduce__`` on every WithProvenance class so pickle can handle them.
 
     Safe to call multiple times; only patches classes not already patched.
     Should be called after every ``load_yaml()`` since ``_wrapper_registry``

@@ -73,7 +73,8 @@ def _format_provenance_comment(provenance):
 
 
 def _key_provenance(config, key):
-    """Look up provenance attached to a *key* string inside *config*.
+    """
+    Look up provenance attached to a *key* string inside *config*.
 
     When a dict entry maps to an empty dict/list, the *value* has no scalar
     provenance.  However the *key* may be a ``StrWithProvenance`` carrying the

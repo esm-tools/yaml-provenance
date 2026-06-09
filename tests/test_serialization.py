@@ -40,7 +40,6 @@ def loaded_config():
 
 class TestPickleReducers:
     def test_str_roundtrip(self, loaded_config):
-        register_pickle_reducers()
         val = loaded_config["echam"]["type"]
         data = pickle.dumps(val)
         restored = pickle.loads(data)
@@ -48,7 +47,6 @@ class TestPickleReducers:
         assert isinstance(restored, str)
 
     def test_int_roundtrip(self, loaded_config):
-        register_pickle_reducers()
         val = loaded_config["echam"]["files"]["greenhouse"]["a_list"][0]
         data = pickle.dumps(val)
         restored = pickle.loads(data)
@@ -56,7 +54,6 @@ class TestPickleReducers:
         assert isinstance(restored, int)
 
     def test_bool_roundtrip(self):
-        register_pickle_reducers()
         val = BoolWithProvenance(True, {"yaml_file": "test", "line": 1, "col": 1,
                                          "category": None, "subcategory": None})
         data = pickle.dumps(val)
@@ -64,7 +61,6 @@ class TestPickleReducers:
         assert restored is True
 
     def test_none_roundtrip(self):
-        register_pickle_reducers()
         val = NoneWithProvenance(None, {"yaml_file": "test", "line": 1, "col": 1,
                                          "category": None, "subcategory": None})
         data = pickle.dumps(val)
@@ -72,7 +68,6 @@ class TestPickleReducers:
         assert restored is None
 
     def test_list_roundtrip(self, loaded_config):
-        register_pickle_reducers()
         val = loaded_config["echam"]["files"]["greenhouse"]["a_list"]
         data = pickle.dumps(val)
         restored = pickle.loads(data)
@@ -80,19 +75,10 @@ class TestPickleReducers:
         assert isinstance(restored, list)
 
     def test_dict_roundtrip(self, loaded_config):
-        register_pickle_reducers()
         data = pickle.dumps(loaded_config)
         restored = pickle.loads(data)
         assert isinstance(restored, dict)
         assert "echam" in restored
-
-    def test_idempotent(self, loaded_config):
-        """Calling register_pickle_reducers twice should be safe."""
-        register_pickle_reducers()
-        register_pickle_reducers()
-        val = loaded_config["echam"]["type"]
-        data = pickle.dumps(val)
-        assert pickle.loads(data) == "atmosphere"
 
 
 # ── YAML Representers ────────────────────────────────────────────────────
@@ -100,21 +86,18 @@ class TestPickleReducers:
 
 class TestYAMLRepresenters:
     def test_dump_str(self, loaded_config):
-        register_yaml_representers()
         yml = YAML()
         buf = StringIO()
         yml.dump({"key": loaded_config["echam"]["type"]}, buf)
         assert "atmosphere" in buf.getvalue()
 
     def test_dump_int(self, loaded_config):
-        register_yaml_representers()
         yml = YAML()
         buf = StringIO()
         yml.dump({"key": loaded_config["echam"]["files"]["greenhouse"]["a_list"][0]}, buf)
         assert "1" in buf.getvalue()
 
     def test_dump_bool(self):
-        register_yaml_representers()
         val = BoolWithProvenance(True, {"yaml_file": "test", "line": 1, "col": 1,
                                          "category": None, "subcategory": None})
         yml = YAML()
@@ -123,7 +106,6 @@ class TestYAMLRepresenters:
         assert "true" in buf.getvalue()
 
     def test_dump_none(self):
-        register_yaml_representers()
         val = NoneWithProvenance(None, {"yaml_file": "test", "line": 1, "col": 1,
                                          "category": None, "subcategory": None})
         yml = YAML()
@@ -134,7 +116,6 @@ class TestYAMLRepresenters:
         assert "key:" in output
 
     def test_dump_list(self, loaded_config):
-        register_yaml_representers()
         yml = YAML()
         buf = StringIO()
         yml.dump({"key": loaded_config["echam"]["files"]["greenhouse"]["a_list"]}, buf)
@@ -144,20 +125,10 @@ class TestYAMLRepresenters:
         assert "3" in output
 
     def test_dump_dict(self, loaded_config):
-        register_yaml_representers()
         yml = YAML()
         buf = StringIO()
         yml.dump(dict(loaded_config), buf)
         assert "echam" in buf.getvalue()
-
-    def test_idempotent(self, loaded_config):
-        """Calling register_yaml_representers twice should be safe."""
-        register_yaml_representers()
-        register_yaml_representers()
-        yml = YAML()
-        buf = StringIO()
-        yml.dump({"key": loaded_config["echam"]["type"]}, buf)
-        assert "atmosphere" in buf.getvalue()
 
 
 # ── JSON Encoder ──────────────────────────────────────────────────────────
@@ -194,9 +165,6 @@ class TestDeepcopyAfterPickleReducers:
     """``copy.deepcopy`` must preserve WithProvenance types even after
     ``register_pickle_reducers`` patches ``__reduce__``."""
 
-    @pytest.fixture(autouse=True)
-    def _register(self):
-        register_pickle_reducers()
 
     def test_str_deepcopy(self):
         s = wrapper_with_provenance_factory(

@@ -70,6 +70,7 @@ class TestTransferProvenance:
         result = transfer_provenance(original, 84)
         assert result == 84
         assert hasattr(result, "provenance")
+        assert result.provenance[-1]["yaml_file"] == "src.num"
 
 
 # ── annotate_dict ────────────────────────────────────────────────────────
