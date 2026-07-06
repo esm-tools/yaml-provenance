@@ -26,9 +26,7 @@ def _dict_deepcopy(self, memo):
     new_dict = {copy.deepcopy(k, memo): copy.deepcopy(v, memo) for k, v in self.items()}
     prov = self.get_provenance()
     new_prov = copy.deepcopy(prov, memo)
-    new_obj = DictWithProvenance.__new__(DictWithProvenance)
-    memo[obj_id] = new_obj
-    dict.__init__(new_obj, new_dict)
+    new_obj = DictWithProvenance(new_dict, new_prov)
     new_obj._config = self._config
     new_obj.custom_setitem = False
     new_obj.put_provenance(new_prov)
