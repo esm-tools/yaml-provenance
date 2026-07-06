@@ -42,13 +42,8 @@ class ListWithProvenance(list):
         new_items = [copy.deepcopy(item, memo) for item in self]
         prov = self.get_provenance()
         new_prov = copy.deepcopy(prov, memo)
-        new_obj = ListWithProvenance.__new__(ListWithProvenance)
-        memo[obj_id] = new_obj
-        list.__init__(new_obj, new_items)
+        new_obj = ListWithProvenance(new_items, new_prov)
         new_obj._config = self._config
-        new_obj.custom_setitem = False
-        new_obj.put_provenance(new_prov)
-        new_obj.custom_setitem = True
         return new_obj
 
     def __reduce__(self):
