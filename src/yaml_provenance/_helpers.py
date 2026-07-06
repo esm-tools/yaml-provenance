@@ -64,6 +64,7 @@ def wrap_computed(value, source):
         "category": None,
         "subcategory": None,
     }
+    # No provenance-wrapped key here (unlike the YAML loader), so carry it on the value.
     if value is None:
         return NoneWithProvenance(value, provenance)
     return wrapper_with_provenance_factory(value, provenance)

@@ -110,7 +110,7 @@ class DictWithProvenance(dict):
             elif hasattr(val, "provenance"):
                 self[key].provenance.extend(provenance)
             elif val is None:
-                # Plain None can't hold provenance; use NoneWithProvenance explicitly.
+                # No provenance-wrapped key here (unlike the YAML loader), so carry it on the value.
                 self[key] = NoneWithProvenance(val, provenance)
             else:
                 self[key] = wrapper_with_provenance_factory(val, provenance)
