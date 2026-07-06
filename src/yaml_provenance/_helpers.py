@@ -100,13 +100,19 @@ def transfer_provenance(original, result):
 
 def annotate_dict(d, source_prefix):
     """
-    Wrap every scalar leaf of *d* with a per-key provenance source in-place.
+    Give every scalar leaf of *d* synthetic provenance recording its source.
+
+    Purpose: values injected programmatically (env vars, computed defaults,
+    CLI overrides) never passed through the YAML loader, so they carry no
+    provenance.  This walks *d* and tags each leaf with a per-key source
+    (e.g. ``myapp.config.key1``) so those values still appear with a
+    meaningful origin in provenance dumps instead of ``"no provenance"``.
 
     For each key ``K``, the source is ``<source_prefix>.<K>``.
     Keys that contain a ``.`` are quoted (e.g. ``prefix["a.b"]``) to avoid
     ambiguity with nested-key notation.
-    Recurses into nested dicts.  Leaves that already carry provenance are
-    left untouched.
+    Recurses into nested dicts and lists (list elements use ``[i]`` in the
+    source).  Leaves that already carry provenance are left untouched.
 
     Parameters
     ----------
@@ -123,8 +129,29 @@ def annotate_dict(d, source_prefix):
     for key, value in d.items():
         key_str = str(key)
         source_key = f'["{key_str}"]' if "." in key_str else f".{key_str}"
+        source = f"{source_prefix}{source_key}"
         if isinstance(value, dict):
-            annotate_dict(value, f"{source_prefix}{source_key}")
+            annotate_dict(value, source)
+        elif isinstance(value, list):
+            _annotate_list(value, source)
         elif not hasattr(value, "provenance"):
-            d[key] = wrap_computed(value, f"{source_prefix}{source_key}")
+            d[key] = wrap_computed(value, source)
     return d
+
+
+def _annotate_list(lst, source_prefix):
+    """
+    Annotate list elements in-place, recursing into nested dicts and lists.
+
+    Counterpart to :func:`annotate_dict` for list values.  Element ``i`` uses
+    the source ``<source_prefix>[i]``.  Without this, a list handed to
+    ``wrap_computed`` would be mangled into an empty wrapper (data loss).
+    """
+    for i, item in enumerate(lst):
+        source = f"{source_prefix}[{i}]"
+        if isinstance(item, dict):
+            annotate_dict(item, source)
+        elif isinstance(item, list):
+            _annotate_list(item, source)
+        elif not hasattr(item, "provenance"):
+            lst[i] = wrap_computed(item, source)

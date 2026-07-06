@@ -115,6 +115,21 @@ class TestAnnotateDict:
         d = {"x": 10}
         assert annotate_dict(d, "p") is d
 
+    def test_list_value(self):
+        d = {"key": ["elem1", "elem2"]}
+        annotate_dict(d, "cfg")
+        assert list(d["key"]) == ["elem1", "elem2"]  # data preserved, not mangled
+        assert d["key"][0].provenance[-1]["yaml_file"] == "cfg.key[0]"
+        assert d["key"][1].provenance[-1]["yaml_file"] == "cfg.key[1]"
+
+    def test_dict_nested_in_list(self):
+        d = {"key": ["elem1", {"nested_key": {"key1": "val1", "key2": "val2"}}]}
+        annotate_dict(d, "cfg")
+        assert d["key"][0].provenance[-1]["yaml_file"] == "cfg.key[0]"
+        leaf = d["key"][1]["nested_key"]["key1"]
+        assert leaf == "val1"
+        assert leaf.provenance[-1]["yaml_file"] == "cfg.key[1].nested_key.key1"
+
 
 # ── load_yaml with file objects ──────────────────────────────────────────
 
