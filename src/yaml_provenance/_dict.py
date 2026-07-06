@@ -53,6 +53,7 @@ class DictWithProvenance(dict):
         new_prov = copy.deepcopy(prov, memo)
         new_obj = DictWithProvenance(new_dict, new_prov)
         new_obj._config = self._config
+        memo[obj_id] = new_obj
         return new_obj
 
     def __reduce__(self):

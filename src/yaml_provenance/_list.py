@@ -44,6 +44,7 @@ class ListWithProvenance(list):
         new_prov = copy.deepcopy(prov, memo)
         new_obj = ListWithProvenance(new_items, new_prov)
         new_obj._config = self._config
+        memo[obj_id] = new_obj
         return new_obj
 
     def __reduce__(self):
