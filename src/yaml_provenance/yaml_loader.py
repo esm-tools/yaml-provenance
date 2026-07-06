@@ -120,7 +120,7 @@ class ProvenanceLoader:
             if _is_prov_tuple(raw_key):
                 raw_key_val = raw_key[0]
                 key_line, key_col = raw_key[1]
-                key = _wrap(raw_key_val, {
+                key = wrapper_with_provenance_factory(raw_key_val, {
                     "line": key_line, "col": key_col,
                     "yaml_file": filepath,
                     "category": category,
