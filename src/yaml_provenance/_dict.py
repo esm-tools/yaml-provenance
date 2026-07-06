@@ -28,9 +28,6 @@ def _dict_deepcopy(self, memo):
     new_prov = copy.deepcopy(prov, memo)
     new_obj = DictWithProvenance(new_dict, new_prov)
     new_obj._config = self._config
-    new_obj.custom_setitem = False
-    new_obj.put_provenance(new_prov)
-    new_obj.custom_setitem = True
     return new_obj
 
 
