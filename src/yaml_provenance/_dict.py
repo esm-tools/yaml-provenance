@@ -12,25 +12,6 @@ from ._provenance import Provenance
 from ._wrapper import wrapper_with_provenance_factory, _try_register_yaml_representer, NoneWithProvenance
 
 
-def _dict_deepcopy(self, memo):
-    """
-    ``__deepcopy__`` for DictWithProvenance.
-
-    Returns a DictWithProvenance whose keys, values and provenance are all
-    deep-copied.  Without this, ``copy.deepcopy`` falls through to
-    ``__reduce__`` which reduces the container to a plain ``dict``.
-    """
-    obj_id = id(self)
-    if obj_id in memo:
-        return memo[obj_id]
-    new_dict = {copy.deepcopy(k, memo): copy.deepcopy(v, memo) for k, v in self.items()}
-    prov = self.get_provenance()
-    new_prov = copy.deepcopy(prov, memo)
-    new_obj = DictWithProvenance(new_dict, new_prov)
-    new_obj._config = self._config
-    return new_obj
-
-
 class DictWithProvenance(dict):
     """
     A dictionary subclass that tracks provenance for all nested values.
@@ -58,7 +39,21 @@ class DictWithProvenance(dict):
         self.put_provenance(provenance)
         self.custom_setitem = True
 
-    __deepcopy__ = _dict_deepcopy
+    def __deepcopy__(self, memo):
+        """
+        Returns a DictWithProvenance whose keys, values and provenance are all
+        deep-copied.  Without this, ``copy.deepcopy`` falls through to
+        ``__reduce__`` which reduces the container to a plain ``dict``.
+        """
+        obj_id = id(self)
+        if obj_id in memo:
+            return memo[obj_id]
+        new_dict = {copy.deepcopy(k, memo): copy.deepcopy(v, memo) for k, v in self.items()}
+        prov = self.get_provenance()
+        new_prov = copy.deepcopy(prov, memo)
+        new_obj = DictWithProvenance(new_dict, new_prov)
+        new_obj._config = self._config
+        return new_obj
 
     def __reduce__(self):
         return (dict, (dict(self),))
