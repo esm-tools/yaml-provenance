@@ -123,13 +123,13 @@ def wrapper_with_provenance_deepcopy(self, memo):
     """``__deepcopy__`` for WithProvenance subclasses.
 
     ``copy.deepcopy`` checks for ``__deepcopy__`` *before* falling back to
-    ``__reduce__``.  The pickle reducers registered by
-    The ``__reduce__`` method intentionally reduces to the plain builtin
-    type (e.g. ``str``) so that pickle output is compact.  Without a
-    ``__deepcopy__`` override, ``copy.deepcopy`` would use the same
+    ``__reduce__``.  ``__reduce__`` intentionally reduces to the plain builtin
+    type (e.g. ``str``) so that pickle output is compact.  Without this
+    ``__deepcopy__`` override, ``copy.deepcopy`` would take that same
     ``__reduce__`` path and silently discard provenance.
     """
     obj_id = id(self)
+    # deepcopy memo: reuse the copy already made for this object (shared refs / cycles).
     if obj_id in memo:
         return memo[obj_id]
     new = wrapper_with_provenance_factory(
