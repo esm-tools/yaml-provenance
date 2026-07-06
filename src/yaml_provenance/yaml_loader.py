@@ -13,7 +13,7 @@ from ruamel.yaml.constructor import RoundTripConstructor
 
 from ._config import get_config
 from ._dict import DictWithProvenance
-from ._wrapper import wrapper_with_provenance_factory as _wrap
+from ._wrapper import wrapper_with_provenance_factory
 
 
 class ProvenanceConstructor(RoundTripConstructor):
