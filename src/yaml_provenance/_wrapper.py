@@ -4,6 +4,8 @@ WithProvenance wrapper factory — creates provenance-aware subclasses dynamical
 
 import copy
 
+from ruamel.yaml.representer import SafeRepresenter, RoundTripRepresenter
+
 from ._provenance import Provenance
 from ._config import get_config
 
@@ -33,7 +35,7 @@ def _make_pickle_reduce(builtin_type):
 def _register_yaml_representer(cls, base_type=None, value_fn=None):
     """Register *cls* with ruamel.yaml's SafeRepresenter and RoundTripRepresenter.
 
-    ruamel.yaml is a hard dependency, so this imports it directly and raises
+    ruamel.yaml is a hard dependency (imported at module level), so this raises
     if the base type has no representer — a missing representer is a bug, not
     something to silently skip.
 
@@ -49,8 +51,6 @@ def _register_yaml_representer(cls, base_type=None, value_fn=None):
         base representer. If ``None``, passes *data* directly (works for
         subclassable builtins like ``str``, ``int``).
     """
-    from ruamel.yaml.representer import SafeRepresenter, RoundTripRepresenter
-
     for repr_class in (SafeRepresenter, RoundTripRepresenter):
         lookup_type = base_type if base_type is not None else _get_builtin_base(cls)
         fn = repr_class.yaml_representers.get(lookup_type)
