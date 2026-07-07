@@ -132,7 +132,7 @@ def wrapper_with_provenance_deepcopy(self, memo):
     # deepcopy memo: reuse the copy already made for this object (shared refs / cycles).
     if obj_id in memo:
         return memo[obj_id]
-    new = wrapper_with_provenance_factory(
+    new = type(self)(
         type(self).__mro__[1](self),  # plain builtin value (str, int, …)
         copy.deepcopy(self._provenance, memo),
     )
@@ -282,8 +282,8 @@ def wrapper_with_provenance_factory(value, provenance=None):
 
 
 # Register YAML representers for the unsubclassable types at definition time
-_try_register_yaml_representer(BoolWithProvenance, base_type=bool, value_fn=lambda d: d.value)
-_try_register_yaml_representer(NoneWithProvenance, base_type=type(None), value_fn=lambda d: None)
+_register_yaml_representer(BoolWithProvenance, base_type=bool, value_fn=lambda d: d.value)
+_register_yaml_representer(NoneWithProvenance, base_type=type(None), value_fn=lambda d: None)
 
 
 def get_wrapper_class(class_name):

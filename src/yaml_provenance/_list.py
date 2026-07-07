@@ -163,4 +163,4 @@ class ListWithProvenance(list):
         super().__setitem__(indx, val)
 
 
-_try_register_yaml_representer(ListWithProvenance, value_fn=list)
+_register_yaml_representer(ListWithProvenance, value_fn=list)

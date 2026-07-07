@@ -305,4 +305,4 @@ class DictWithProvenance(dict):
             self[key].provenance = val
 
 
-_try_register_yaml_representer(DictWithProvenance, value_fn=dict)
+_register_yaml_representer(DictWithProvenance, value_fn=dict)
