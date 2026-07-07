@@ -9,7 +9,7 @@ from loguru import logger
 from ._config import get_config
 from ._exceptions import CategoryConflictError
 from ._provenance import Provenance
-from ._wrapper import wrapper_with_provenance_factory, _try_register_yaml_representer, NoneWithProvenance
+from ._wrapper import wrapper_with_provenance_factory, _register_yaml_representer
 
 
 class DictWithProvenance(dict):
@@ -110,9 +110,6 @@ class DictWithProvenance(dict):
                 self[key].set_provenance(provenance)
             elif hasattr(val, "provenance"):
                 self[key].provenance.extend(provenance)
-            elif val is None:
-                # No provenance-wrapped key here (unlike the YAML loader), so carry it on the value.
-                self[key] = NoneWithProvenance(val, provenance)
             else:
                 self[key] = wrapper_with_provenance_factory(val, provenance)
 

@@ -6,7 +6,7 @@ import copy
 
 from ._config import get_config
 from ._provenance import Provenance
-from ._wrapper import wrapper_with_provenance_factory, _try_register_yaml_representer
+from ._wrapper import wrapper_with_provenance_factory, _register_yaml_representer
 
 
 class ListWithProvenance(list):

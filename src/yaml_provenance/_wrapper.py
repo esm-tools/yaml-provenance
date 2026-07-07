@@ -30,10 +30,12 @@ def _make_pickle_reduce(builtin_type):
     return __reduce__
 
 
-def _try_register_yaml_representer(cls, base_type=None, value_fn=None):
+def _register_yaml_representer(cls, base_type=None, value_fn=None):
     """Register *cls* with ruamel.yaml's SafeRepresenter and RoundTripRepresenter.
 
-    No-op if ruamel.yaml is not installed.
+    ruamel.yaml is a hard dependency, so this imports it directly and raises
+    if the base type has no representer — a missing representer is a bug, not
+    something to silently skip.
 
     Parameters
     ----------
@@ -47,21 +49,23 @@ def _try_register_yaml_representer(cls, base_type=None, value_fn=None):
         base representer. If ``None``, passes *data* directly (works for
         subclassable builtins like ``str``, ``int``).
     """
-    try:
-        from ruamel.yaml.representer import SafeRepresenter, RoundTripRepresenter
-    except ImportError:
-        return
+    from ruamel.yaml.representer import SafeRepresenter, RoundTripRepresenter
+
     for repr_class in (SafeRepresenter, RoundTripRepresenter):
         lookup_type = base_type if base_type is not None else _get_builtin_base(cls)
         fn = repr_class.yaml_representers.get(lookup_type)
-        if fn:
-            if value_fn is not None:
-                repr_class.add_representer(
-                    cls,
-                    lambda dumper, data, _fn=fn, _vfn=value_fn: _fn(dumper, _vfn(data)),
-                )
-            else:
-                repr_class.add_representer(cls, fn)
+        if fn is None:
+            raise RuntimeError(
+                f"No ruamel.yaml representer for base type {lookup_type!r} "
+                f"(needed to represent {cls.__name__})."
+            )
+        if value_fn is not None:
+            repr_class.add_representer(
+                cls,
+                lambda dumper, data, _fn=fn, _vfn=value_fn: _fn(dumper, _vfn(data)),
+            )
+        else:
+            repr_class.add_representer(cls, fn)
 
 
 # ========================================================
@@ -250,10 +254,7 @@ def wrapper_with_provenance_factory(value, provenance=None):
         return BoolWithProvenance(value, provenance)
 
     elif value is None:
-        # Return plain None so that `x is None` identity checks work as expected.
-        # NoneWithProvenance breaks Python's idiomatic `is None` test (PEP 8).
-        # Provenance on a None value is inaccessible anyway (None has no attributes).
-        return None
+        return NoneWithProvenance(value, provenance)
 
     elif isinstance(value, PROVENANCE_MAPPINGS):
         return value
@@ -276,7 +277,7 @@ def wrapper_with_provenance_factory(value, provenance=None):
                     "__reduce__": _make_pickle_reduce(_get_builtin_base(subtype)),
                 },
             )
-            _try_register_yaml_representer(_wrapper_registry[class_name])
+            _register_yaml_representer(_wrapper_registry[class_name])
 
         return _wrapper_registry[class_name](value, provenance)
 

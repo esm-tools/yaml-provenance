@@ -14,7 +14,7 @@ from ._wrapper import (
 from ._dict import DictWithProvenance
 from ._list import ListWithProvenance
 from ._decorator import keep_provenance_in_recursive_function
-from ._helpers import clean_provenance, wrap_computed, transfer_provenance, annotate_dict
+from ._helpers import clean_provenance, is_none_like, wrap_computed, transfer_provenance, annotate_dict
 from .yaml_loader import ProvenanceConstructor, ProvenanceLoader, load_yaml
 from ._yaml_dumper import dump_yaml
 from ._serialization import ProvenanceJSONEncoder
@@ -40,6 +40,7 @@ __all__ = [
     "keep_provenance_in_recursive_function",
     # Helpers
     "clean_provenance",
+    "is_none_like",
     "wrap_computed",
     "transfer_provenance",
     "annotate_dict",

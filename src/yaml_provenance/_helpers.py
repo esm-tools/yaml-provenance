@@ -35,6 +35,27 @@ def clean_provenance(data):
         return data
 
 
+def is_none_like(value):
+    """
+    True if *value* is ``None`` or a ``NoneWithProvenance`` wrapper.
+
+    Use in place of ``x is None`` for values that may carry provenance:
+    ``NoneWithProvenance is None`` is always ``False`` by design (it is a
+    distinct object), so identity checks miss provenance-wrapped nulls.
+
+    Parameters
+    ----------
+    value : any
+        The value to test.
+
+    Returns
+    -------
+    bool
+        ``True`` for ``None`` and ``NoneWithProvenance``, ``False`` otherwise.
+    """
+    return value is None or isinstance(value, NoneWithProvenance)
+
+
 def wrap_computed(value, source):
     """
     Wrap a value with provenance pointing to *source*.
@@ -64,9 +85,6 @@ def wrap_computed(value, source):
         "category": None,
         "subcategory": None,
     }
-    # No provenance-wrapped key here (unlike the YAML loader), so carry it on the value.
-    if value is None:
-        return NoneWithProvenance(value, provenance)
     return wrapper_with_provenance_factory(value, provenance)
 
 
