@@ -142,6 +142,9 @@ class ProvenanceLoader:
                         val, filepath, category, subcategory
                     )
                 else:
+                    # Null scalar: ruamel marks it at the next node, so anchor to the key.
+                    if val is None and _is_prov_tuple(raw_key):
+                        line, col = key_line, key_col
                     data[key] = val
                     prov[key] = {
                         "line": line,
