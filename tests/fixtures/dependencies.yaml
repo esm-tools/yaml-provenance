@@ -1,0 +1,8 @@
+JOBS:
+  SIM:
+    FILE: sim.sh
+    DEPENDENCIES:
+      SETUP: {}
+      INI: {}
+      SIM-1:
+        STATUS: COMPLETED

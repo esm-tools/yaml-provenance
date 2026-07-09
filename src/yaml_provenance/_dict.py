@@ -9,7 +9,7 @@ from loguru import logger
 from ._config import get_config
 from ._exceptions import CategoryConflictError
 from ._provenance import Provenance
-from ._wrapper import wrapper_with_provenance_factory
+from ._wrapper import wrapper_with_provenance_factory, _register_yaml_representer
 
 
 class DictWithProvenance(dict):
@@ -38,6 +38,26 @@ class DictWithProvenance(dict):
         self.custom_setitem = False
         self.put_provenance(provenance)
         self.custom_setitem = True
+
+    def __deepcopy__(self, memo):
+        """
+        Returns a DictWithProvenance whose keys, values and provenance are all
+        deep-copied.  Without this, ``copy.deepcopy`` falls through to
+        ``__reduce__`` which reduces the container to a plain ``dict``.
+        """
+        obj_id = id(self)
+        if obj_id in memo:
+            return memo[obj_id]
+        new_dict = {copy.deepcopy(k, memo): copy.deepcopy(v, memo) for k, v in self.items()}
+        prov = self.get_provenance()
+        new_prov = copy.deepcopy(prov, memo)
+        new_obj = DictWithProvenance(new_dict, new_prov)
+        new_obj._config = self._config
+        memo[obj_id] = new_obj
+        return new_obj
+
+    def __reduce__(self):
+        return (dict, (dict(self),))
 
     def put_provenance(self, provenance):
         """
@@ -280,3 +300,6 @@ class DictWithProvenance(dict):
 
         for key, val in new_provs.items():
             self[key].provenance = val
+
+
+_register_yaml_representer(DictWithProvenance, value_fn=dict)

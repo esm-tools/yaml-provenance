@@ -6,7 +6,7 @@ import copy
 
 from ._config import get_config
 from ._provenance import Provenance
-from ._wrapper import wrapper_with_provenance_factory
+from ._wrapper import wrapper_with_provenance_factory, _register_yaml_representer
 
 
 class ListWithProvenance(list):
@@ -29,6 +29,26 @@ class ListWithProvenance(list):
         self.custom_setitem = False
         self.put_provenance(provenance)
         self.custom_setitem = True
+
+    def __deepcopy__(self, memo):
+        """
+        Returns a ListWithProvenance whose elements and provenance are all
+        deep-copied.  Without this, ``copy.deepcopy`` falls through to
+        ``__reduce__`` which reduces the container to a plain ``list``.
+        """
+        obj_id = id(self)
+        if obj_id in memo:
+            return memo[obj_id]
+        new_items = [copy.deepcopy(item, memo) for item in self]
+        prov = self.get_provenance()
+        new_prov = copy.deepcopy(prov, memo)
+        new_obj = ListWithProvenance(new_items, new_prov)
+        new_obj._config = self._config
+        memo[obj_id] = new_obj
+        return new_obj
+
+    def __reduce__(self):
+        return (list, (list(self),))
 
     def put_provenance(self, provenance):
         """
@@ -141,3 +161,6 @@ class ListWithProvenance(list):
         Call the original ``list.__setitem__`` without provenance tracking.
         """
         super().__setitem__(indx, val)
+
+
+_register_yaml_representer(ListWithProvenance, value_fn=list)

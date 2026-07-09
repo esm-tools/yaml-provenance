@@ -50,11 +50,16 @@ def _format_provenance_comment(provenance):
     if not provenance:
         return "no provenance"
 
-    comment = (
-        f"{provenance['yaml_file']},"
-        f"line:{provenance['line']},"
-        f"col:{provenance['col']}"
-    )
+    line = provenance['line']
+    col = provenance['col']
+    if line == 0 and col == 0:
+        comment = f"{provenance['yaml_file']}"
+    else:
+        comment = (
+            f"{provenance['yaml_file']},"
+            f"line:{line},"
+            f"col:{col}"
+        )
 
     category = provenance.get("category")
     if category is not None:
@@ -65,6 +70,23 @@ def _format_provenance_comment(provenance):
             comment += f",category:{category}"
 
     return comment
+
+
+def _key_provenance(config, key):
+    """
+    Look up provenance attached to a *key* string inside *config*.
+
+    When a dict entry maps to an empty dict/list, the *value* has no scalar
+    provenance.  However the *key* may be a ``StrWithProvenance`` carrying the
+    source file, line and column.  This helper iterates the parent dict's keys
+    to find the matching one and returns its last provenance entry, or ``None``.
+    """
+    if not isinstance(config, dict):
+        return None
+    for k in config.keys():
+        if str(k) == str(key) and hasattr(k, "provenance") and k.provenance:
+            return k.provenance[-1]
+    return None
 
 
 def _add_eol_comments(commented_config, config):
@@ -90,8 +112,23 @@ def _add_eol_comments(commented_config, config):
             if isinstance(cvalue, (dict, list)):
                 if isinstance(pvalue, (dict, list)):
                     _add_eol_comments(cvalue, pvalue)
+                    # For empty dicts/lists, check key provenance from the
+                    # parent config (e.g. DEPENDENCIES entries like
+                    # ``AQUA_SETUP: {}``).  The key itself may be a
+                    # StrWithProvenance carrying the source file/line/col.
+                    if len(cvalue) == 0:
+                        prov = _key_provenance(config, key)
+                        if prov is None:
+                            prov = getattr(pvalue, "provenance", [None])[-1]
+                        comment = _format_provenance_comment(prov)
+                        commented_config.yaml_add_eol_comment(comment, key)
             else:
-                provenance = getattr(pvalue, "provenance", [None])[-1]
+                if pvalue is None:
+                    # Null value — the value itself has no provenance attr.
+                    # Fall back to the key's own provenance (same file/line).
+                    provenance = _key_provenance(config, key)
+                else:
+                    provenance = getattr(pvalue, "provenance", [None])[-1]
                 comment = _format_provenance_comment(provenance)
                 commented_config.yaml_add_eol_comment(comment, key)
 
@@ -103,6 +140,10 @@ def _add_eol_comments(commented_config, config):
             if isinstance(cvalue, (dict, list)):
                 if isinstance(pvalue, (dict, list)):
                     _add_eol_comments(cvalue, pvalue)
+                    if len(cvalue) == 0:
+                        provenance = getattr(pvalue, "provenance", [None])[-1]
+                        comment = _format_provenance_comment(provenance)
+                        commented_config.yaml_add_eol_comment(comment, indx)
             else:
                 provenance = getattr(pvalue, "provenance", [None])[-1]
                 comment = _format_provenance_comment(provenance)

@@ -8,9 +8,11 @@ import pytest
 
 from yaml_provenance import (
     DictWithProvenance,
+    NoneWithProvenance,
     Provenance,
     ProvenanceConfig,
     configure,
+    is_none_like,
     wrapper_with_provenance_factory,
     CategoryConflictError,
 )
@@ -19,6 +21,18 @@ from yaml_provenance import (
 def test_get_provenance_from_yaml_loader(config, check_provenance):
     """Test 1: Checks for correct provenance entries from example2.yaml."""
     assert config.get_provenance() == check_provenance
+
+
+def test_none_value_keeps_provenance():
+    """Regression: a None value is wrapped (NoneWithProvenance) so its value-level
+    provenance survives in the dump — the reason it stays in the factory. With a
+    plain None the dump would report None (no provenance) for this key."""
+    prov = {"line": 7, "col": 3, "yaml_file": "f.yaml"}
+    d = DictWithProvenance({"empty": None}, {"empty": prov})
+    assert isinstance(d["empty"], NoneWithProvenance)
+    assert is_none_like(d["empty"])
+    assert d["empty"].value is None
+    assert d.get_provenance()["empty"] == prov
 
 
 def test_get_provenance_of_added_entry(config, check_provenance):

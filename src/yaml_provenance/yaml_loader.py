@@ -13,6 +13,7 @@ from ruamel.yaml.constructor import RoundTripConstructor
 
 from ._config import get_config
 from ._dict import DictWithProvenance
+from ._wrapper import wrapper_with_provenance_factory
 
 
 class ProvenanceConstructor(RoundTripConstructor):
@@ -73,14 +74,20 @@ class ProvenanceLoader:
 
         Parameters
         ----------
-        filepath : str or Path
-            Path to the YAML file.
+        filepath : str, Path, or file-like
+            Path to the YAML file, or an open file object with a ``.name``
+            attribute.
 
         Returns
         -------
         DictWithProvenance
             The loaded data with provenance tracking.
         """
+        # Accept file-like objects by extracting their path.
+        # pathlib.Path also has a ``.name`` attribute (the final component),
+        # so we must exclude it to preserve the full path.
+        if hasattr(filepath, 'name') and not isinstance(filepath, Path):
+            filepath = filepath.name
         filepath = str(filepath)
         category, subcategory = self._category_resolver(filepath)
 
@@ -107,9 +114,18 @@ class ProvenanceLoader:
         prov = {}
 
         for raw_key, raw_val in raw_dict.items():
-            # Unwrap key
+            # Unwrap key — wrap string keys with provenance so that
+            # even entries whose *values* are empty dicts or lists
+            # still carry a provenance trace (on the key itself).
             if _is_prov_tuple(raw_key):
-                key = raw_key[0]
+                raw_key_val = raw_key[0]
+                key_line, key_col = raw_key[1]
+                key = wrapper_with_provenance_factory(raw_key_val, {
+                    "line": key_line, "col": key_col,
+                    "yaml_file": filepath,
+                    "category": category,
+                    "subcategory": subcategory,
+                })
             else:
                 key = raw_key
 
@@ -126,6 +142,9 @@ class ProvenanceLoader:
                         val, filepath, category, subcategory
                     )
                 else:
+                    # Null scalar: ruamel marks it at the next node, so anchor to the key.
+                    if val is None and _is_prov_tuple(raw_key):
+                        line, col = key_line, key_col
                     data[key] = val
                     prov[key] = {
                         "line": line,
@@ -181,8 +200,9 @@ def load_yaml(filepath, category_resolver=None, config=None):
 
     Parameters
     ----------
-    filepath : str or Path
-        Path to the YAML file.
+    filepath : str, Path, or file-like
+        Path to the YAML file, or an open file object with a ``.name``
+        attribute.
     category_resolver : callable or None
         Maps file paths to ``(category, subcategory)`` tuples.
     config : ProvenanceConfig or None
