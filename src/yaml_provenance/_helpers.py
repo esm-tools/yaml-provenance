@@ -19,6 +19,9 @@ def clean_provenance(data):
     any
         Values in their original format without provenance.
     """
+    if isinstance(data, float):
+        # ruamel ScalarFloat carries None _prec/_width and crashes its representer; return plain float.
+        return float(data)
     if hasattr(data, "value"):
         assert (
             data == data.value
